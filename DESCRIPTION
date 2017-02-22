@@ -1,0 +1,9 @@
+Package: beamaTrends
+Type: Package
+Title: Describe Growth Trends of Timeseries Object
+Version: 0.1
+Author: c(person("Emmanuel", "Amoakohene", role = c("aut", "cre"),  email = "eamoakohene@gmail.com"))
+Maintainer: <eamoakohene@gmail.com>
+Description: Describe in words the year on year or month to month growth of a time series object.
+License: GPL-2
+LazyData: TRUE
