@@ -979,7 +979,8 @@ tp <- R6::R6Class(
 #' @export
 #'
 #' @examples
-tp.view_ons_code <- function( code='ABMI', is_growth = F, select=NULL, select_yr=NULL, selec){
+tp.view_ons_code <- function( code='ABMI', is_growth = F, select_yr=NULL, ops = 'avg',
+                              select = 'MAT,MTH,QTR,YR,YTD,MAT1,MQT1,MAT12,MAT4,MM1,MM12,MM3,QQ1,QQ4,YTD1,YTD12,YTD4,YY1'){
     #source('global.R')
 
   my_data <- onsR2::download( code = code)
@@ -999,7 +1000,7 @@ tp.view_ons_code <- function( code='ABMI', is_growth = F, select=NULL, select_yr
 
   bt <- tg$new(x=dt)
 
-  bt$plot( is_growth = is_growth, title = paste0( trimws( my_data$title ),' (',code,')' ), select = select , select_yr = select_yr)
+  bt$plot( is_growth = is_growth, title = paste0( trimws( my_data$title ),' (',code,')' ), select = select , select_yr = select_yr, ops = ops)
 
 }
 
@@ -1046,3 +1047,23 @@ tp.fred_view_steel_code <- function( row_id ){
     return( ddd$id[ my_row_id ])
 }
 
+tp.view_ons_spider<- function(
+    code='ABMI',
+    y1 = lubridate::year(Sys.Date())-2,
+    y2=lubridate::year(Sys.Date())
+){
+    my_data <- onsR2::download( code = code)
+    my_ts <- my_data$m_data
+    if( is.null( my_ts)){ my_ts <- my_data$q_data}
+    my_plot <- tg$new(my_ts)$plot_spider( title=my_data$title, y1= y1, y2 = y2)
+}
+
+tp.view_spider<- function(
+    code='ABMI',
+    y1 = lubridate::year(Sys.Date())-2,
+    y2=lubridate::year(Sys.Date())
+){
+
+    my_plot <- tg$new( code )$plot_spider( title= code, y1= y1, y2 = y2)
+
+}

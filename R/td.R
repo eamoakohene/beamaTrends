@@ -27,7 +27,9 @@ td <- R6::R6Class(
             super$initialize(x = x, x_start= x_start, x_frq = x_frq, db_limit = db_limit  )
 
             self$set_period( self$data_freq )
+
             self$set_end_properties()
+
             self$set_data_name( x_name )
 
 
@@ -71,6 +73,13 @@ td <- R6::R6Class(
 
                 self$data_name <- value
 
+            }else{
+
+                if(is.character( self$data_raw) ){
+                    self$data_name <- self$data_raw
+                }else{
+                    self$data_name <- "The timeseries"
+                }
             }
             invisible( self )
         },
@@ -80,12 +89,14 @@ td <- R6::R6Class(
             return( self$data_name )
 
         },
+
         set_case = function(txt, i=1){
 
             case_name <- switch( i,
-             "1" = paste0( toupper( substr(txt, 1, 1) ),          substr(txt, 2, nchar(txt))   ),
-             "2" = paste0( toupper( substr(txt, 1, 1) ), tolower( substr(txt, 2, nchar(txt)) ) ),
-             "3" = tolower(txt)
+             "1" = paste0( toupper( substr(txt, 1, 1) ),  substr(txt, 2, nchar(txt))   ),
+             "2" = self$to_proper_case(),
+             "3" = tolower( txt ),
+             "4" = toupper( txt )
             )
           return(case_name)
         },

@@ -12,9 +12,11 @@ SMART_LABELS =  list(
     QQ4 = '4-quarter % change',
     YY1 = '1-year % change',
     MAT1 = 'MAT: 1-month % change',
+    MQT1 = 'MAT: 1-quarter % change',
     MAT12 = 'MAT: 12-month % change',
     MAT4 = 'MAT: 4-quarter % change',
     YTD1 = 'YTD: 1-month % change',
+    YQT1 = 'YTD: 1-quarter % change',
     YTD4 = 'YTD: 4-quarter % change',
     YTD12 = 'YTD: 12-month % change'
 )
@@ -67,7 +69,7 @@ tg <- R6::R6Class(
             self$set_data_format(self$data_raw)
 
             if(self$data_format == self$UNKNOWN ){
-                cat("Unknown data format. Format should be : Timeseries, Dataframe or Vector")
+                cat("Unknown data format. Format should be : Timeseries, Dataframe or Vector\n")
                 return(NULL)
             }
 
@@ -92,7 +94,7 @@ tg <- R6::R6Class(
             if(!is.null(value) && value %in% private$MM1:private$NOTHING){
                 self$data_growth_fx <- value
             }else{
-                cat("Invalid growth rate ")
+                cat("Invalid growth rate \n")
             }
             invisible(self)
         },
@@ -125,7 +127,7 @@ tg <- R6::R6Class(
                mm3 = self$get_mm2(),
                mm12 =self$get_mm12(),
                qq1 = self$get_qq1(),
-               qq4 = self$get_qq4(),
+               qq4 = self$get_qq4( ops = ops ),
                yy1 = self$get_yy1( ops = ops ),
                mat1 = self$get_mat1( ops = ops ),
                mat12 = self$get_mat12( ops = ops ),
@@ -211,11 +213,11 @@ tg <- R6::R6Class(
                         if( (my_local_start[1] > 1900) && (my_local_start[2] %in% 1:12)){
                             self$data_start <- value
                         }else{
-                            cat("Start year or month is out of range")
+                            cat("Start year or month is out of range\n")
                             return(NULL)
                         }
                     }else {
-                        cat("Start should be vector in format (year,month)")
+                        cat("Start should be vector in format (year,month)\n")
                         return(NULL)
                     }
 
@@ -224,7 +226,7 @@ tg <- R6::R6Class(
                     my_col_names <- tolower(names(self$data_raw))
                     my_col_len <- length(my_col_names)
                     if(my_col_len < 2){
-                        cat("Insufficient number of columns. Dataframe should either be in format [yr,mth,value] or [yr,value]")
+                        cat("Insufficient number of columns. Dataframe should either be in format [yr,mth,value] or [yr,value]\n")
                         return(NULL)
                     }
 
@@ -244,7 +246,7 @@ tg <- R6::R6Class(
                             my_df <- dplyr::arrange(self$data_raw,yr)
                             self$data_start <- c(my_df$yr[1])
                         }else{
-                            cat("Invalid column names: column names should be (yr,value) or (yr,mth,value)")
+                            cat("Invalid column names: column names should be (yr,value) or (yr,mth,value)\n")
                             return(NULL)
                         }#if yr
 
@@ -295,7 +297,7 @@ tg <- R6::R6Class(
 
                             }else{
 
-                                cat("Not enough data to calculate frequency automatically. Please manually supply frequency")
+                                cat("Not enough data to calculate frequency automatically. Please manually supply frequency\n")
                                 return(NULL)
 
                             }
@@ -420,6 +422,10 @@ tg <- R6::R6Class(
         set_db_ts_properties = function(){
 
             self$db_df <- my_data <- self$db_run_sql()
+            if( nrow( my_data ) == 0) {
+                cat('Are you sure of the code you have just given me? \n Or is it a time for a tea break? \n Code not in database. Aborting data aquisition ....\n')
+                return( NULL )
+            }
 
             if( is.null( self$data_start) ){ self$data_start <- c( my_data$yr[ 1 ], my_data$mth[ 1 ] )}
 
@@ -614,8 +620,8 @@ tg <- R6::R6Class(
                 'qtr' = self$QTR,
                 'yr'  = self$YR,
                 'ytd' = self$YTD,
-                'mat' = self$MAT,
-                'mqt' = self$MQT
+                'mat' = self$MAT
+
             )
 
             if(is.null(my_match )){
@@ -756,7 +762,7 @@ tg <- R6::R6Class(
                 return(self$data_growth)
 
             }else{
-                cat("Month to month growth rate not possible. Frequency must be 12")
+                cat("Month to month growth rate not possible. Frequency must be 12\n")
                 return(NULL)
             }
         },
@@ -769,7 +775,7 @@ tg <- R6::R6Class(
                 return(self$data_growth)
 
             }else{
-                cat("Three-monthly growth rate not possible. Frequency must be 12")
+                cat("Three-monthly growth rate not possible. Frequency must be 12\n")
                 return(NULL)
             }
         },
@@ -782,12 +788,12 @@ tg <- R6::R6Class(
                 return(self$data_growth)
 
             }else{
-                cat("Year on year monthly growth rate not possible. Frequency must be 12")
+                cat("Year on year monthly growth rate not possible. Frequency must be 12\n")
                 return(NULL)
             }
         },
 
-        get_qq1 = function(){
+        get_qq1 = function( ops = 'avg'){
             if( self$data_freq == 4 ){
 
                 my_growth <- quantmod::Delt( c(self$data_ts),k=1)*100
@@ -796,19 +802,19 @@ tg <- R6::R6Class(
 
             }else if(self$data_freq == 12){
 
-                my_data <- self$set_agg( 'qtr' )$get_agg()
+                my_data <- self$set_agg( 'qtr', ops = ops )$get_agg()
                 my_start <- start( my_data )
                 my_growth <- quantmod::Delt( c( my_data ), k = 1)*100
                 self$data_growth <- ts( c(my_growth), start = my_start, frequency = 4)
                 return( self$data_growth )
 
             }else{
-                cat("Quarter to quarter growth rate not possible. Frequency must be 4 or 12")
+                cat("Quarter to quarter growth rate not possible. Frequency must be 4 or 12\n")
                 return(NULL)
             }
         },
 
-        get_qq4 = function(){
+        get_qq4 = function( ops = 'avg' ){
             if( self$data_freq %in% c(4,12) ){
 
                 my_data <- NULL
@@ -816,7 +822,7 @@ tg <- R6::R6Class(
                 if( self$data_freq == 4){
                     my_data <- self$data_ts
                 }else{
-                    my_data <- self$set_agg( 'qtr' )$get_agg()
+                    my_data <- self$set_agg( 'qtr', ops = ops )$get_agg()
                 }
 
                 my_start <- start( my_data )
@@ -825,7 +831,7 @@ tg <- R6::R6Class(
                 return( self$data_growth )
 
             }else{
-                cat("Year on year quarterly growth rate not possible. Frequency must be 4 or 12")
+                cat("Year on year quarterly growth rate not possible. Frequency must be 4 or 12\n")
                 return(NULL)
             }
         },
@@ -847,12 +853,12 @@ tg <- R6::R6Class(
                 return( self$data_growth )
 
             }else{
-                cat("Year on year growth rate not possible. Frequency must be 1 or  4 or 12")
+                cat("Year on year growth rate not possible. Frequency must be 1 or  4 or 12\n")
                 return(NULL)
             }
         },
         get_mat1 = function( ops = 'sum'){
-            if( self$data_freq %in% c(4,12) ){
+            if( self$data_freq == 12 ){
 
                 my_data <- self$set_agg( 'mat', ops = ops )$get_agg()
 
@@ -863,11 +869,28 @@ tg <- R6::R6Class(
                 return( self$data_growth )
 
             }else{
-                cat("Moving total growth rate not possible. Frequency must be 4 or 12")
+                cat("Moving total growth rate not possible. Frequency must be 12 for monthly data\n")
                 return(NULL)
             }
         },
 
+        get_mqt1 = function( ops = 'sum'){
+
+            if( self$data_freq == 4 ){
+
+                my_data <- self$set_agg( 'mat', ops = ops )$get_agg()
+
+                my_start <- start( my_data )
+
+                my_growth <- quantmod::Delt( c( my_data ), k = 1)*100
+                self$data_growth <- ts( c(my_growth), start = my_start, frequency = self$data_freq)
+                return( self$data_growth )
+
+            }else{
+                cat("Moving total growth rate not possible. Frequency must be 4 for quarterly data\n")
+                return(NULL)
+            }
+        },
         get_mat12 = function( ops = 'sum'){
             if( self$data_freq %in% c(4,12) ){
 
@@ -882,7 +905,7 @@ tg <- R6::R6Class(
                 return( self$data_growth )
 
             }else{
-                cat("Moving total growth rate not possible. Frequency must be 4 or 12")
+                cat("Moving total growth rate not possible. Frequency must be 4 or 12\n")
                 return(NULL)
             }
         },
@@ -907,7 +930,7 @@ tg <- R6::R6Class(
                 return( self$data_growth )
 
             }else{
-                cat("year todate total growth rate not possible. Frequency must be 4 or 12")
+                cat("year todate total growth rate not possible. Frequency must be 4 or 12\n")
                 return(NULL)
             }
         },
@@ -942,10 +965,11 @@ tg <- R6::R6Class(
                        MM1   = self$to_df( self$get_mm1(), 'MM1', T),
                        MM3   = self$to_df( self$get_mm3(), 'MM3', T),
                        MM12  = self$to_df( self$get_mm12(), 'MM12', T),
-                       QQ1   = self$to_df( self$get_qq1(), 'QQ1', T),
-                       QQ4   = self$to_df( self$get_qq4(), 'QQ4', T),
+                       QQ1   = self$to_df( self$get_qq1( ops = ops ), 'QQ1', T),
+                       QQ4   = self$to_df( self$get_qq4( ops = ops ), 'QQ4', T),
                        YY1   = self$to_df( self$get_yy1( ops = ops ), 'YY1', T),
                        MAT1  = self$to_df( self$get_mat1( ops = ops ), 'MAT1', T),
+
                        MAT12 = self$to_df( self$get_mat12( ops = ops ), 'MAT12', T),
                        YTD4  = self$to_df( self$get_ytd4( ops = ops ), 'YTD4', T),
                        YTD12 = self$to_df( self$get_ytd12( ops = ops ), 'YTD12', T)
@@ -957,9 +981,10 @@ tg <- R6::R6Class(
                     my_mm3  <- self$to_df( self$get_mm3(), 'MM3', T)
                     my_mm12 <- self$to_df( self$get_mm12(), 'MM12', T)
                     my_qq1  <- self$to_df( self$get_qq1(), 'QQ1', T)
-                    my_qq4  <- self$to_df( self$get_qq4(), 'QQ4', T)
+                    my_qq4  <- self$to_df( self$get_qq4(ops = ops), 'QQ4', T)
                     my_yy1  <- self$to_df( self$get_yy1( ops = ops ), 'YY1', T)
                     my_mat1 <- self$to_df( self$get_mat1( ops = ops ), 'MAT1', T)
+
                     my_mat12 <- self$to_df( self$get_mat12( ops = ops ), 'MAT12', T)
                     my_ytd4 <- self$to_df( self$get_ytd4( ops = ops ), 'YTD4', T)
                     my_ytd12 <- self$to_df( self$get_ytd12( ops = ops ), 'YTD12', T)
@@ -987,25 +1012,25 @@ tg <- R6::R6Class(
 
                     my_data <- switch( my_select,
                            QQ1   =  self$to_df( self$get_qq1(), 'QQ1', T),
-                           QQ4   = self$to_df( self$get_qq4(), 'QQ4', T),
+                           QQ4   = self$to_df( self$get_qq4( ops = ops ), 'QQ4', T),
                            YY1  = self$to_df( self$get_yy1( ops = ops ), 'YY1', T),
-                           MAT1   = self$to_df( self$get_mat1( ops = ops ), 'MAT1', T),
-                           MAT4   = self$to_df( self$get_mat1( ops = ops ), 'MAT4', T),
+                           MQT1   = self$to_df( self$get_mqt1( ops = ops ), 'MQT1', T),
+                           MAT4   = self$to_df( self$get_mat4( ops = ops ), 'MAT4', T),
                            YTD4= self$to_df( self$get_ytd4( ops = ops ), 'YTD4', T)
                     )
 
                 }else{
 
                     my_qq1 <-self$to_df( self$get_qq1(), 'QQ1', T)
-                    my_qq4 <- self$to_df( self$get_qq4(), 'QQ4', T)
+                    my_qq4 <- self$to_df( self$get_qq4(  ops = ops ), 'QQ4', T)
                     my_yy1 <- self$to_df( self$get_yy1( ops = ops ), 'YY1', T)
-                    my_mat1 <- self$to_df( self$get_mat1( ops = ops ), 'MAT1', T)
+                    my_mqt1 <- self$to_df( self$get_mqt1( ops = ops ), 'MQT1', T)
                     my_ytd4 <- self$to_df( self$get_ytd4( ops = ops ), 'YTD4', T)
-                    my_mat4 <- self$to_df( self$get_mat1( ops = ops ), 'MAT4', T)
+                    my_mat4 <- self$to_df( self$get_mat4( ops = ops ), 'MAT4', T)
 
 
                     my_data <- rbind(
-                        my_qq1, my_qq4, my_yy1, my_mat1,  my_ytd4, my_mat4
+                        my_qq1, my_qq4, my_yy1, my_mqt1,  my_ytd4, my_mat4
                     )
 
                     my_data <- sqldf::sqldf(
@@ -1135,9 +1160,16 @@ tg <- R6::R6Class(
             my_data <- NULL
             my_ylab <- NULL
 
+            if( is.null( self$data_freq ) ) {
+                cat('What meanest thou o sleeper! No data to plot. I am afraid I have to quit...\n')
+                return( NULL )
+            }
+
             if(!is_growth) {
 
                 my_data <- self$get_agg_df(ops = ops, select = my_select, select_yr = my_select_yr)
+
+
                 my_data$value <- my_data$value / skale
                 my_ylab <- skale_title
 
@@ -1593,7 +1625,7 @@ tg.plot_trends<- function(
 
 
     my_data_count <- nrow(my_data)
-    if( my_data_count == 0){cat("Aborting process: 0 records"); return(NULL)}
+    if( my_data_count == 0){cat("Aborting process: 0 records\n"); return(NULL)}
 
     if(is.null( my_data$date) ){
         my_data$date <- as.Date( sprintf("%s-%s-01", my_data$yr, my_data$mth))
@@ -1722,7 +1754,7 @@ tg.plot_trends<- function(
 
 tg.get_growth_data <- function(
     code='m_elec,k646', ops = 'avg',
-    select = 'MAT,MTH,QTR,YR,YTD,MAT1,MAT12,MAT4,MM1,MM12,MM3,QQ1,QQ4,YTD1,YTD12,YTD4,YY1',
+    select = 'MAT,MTH,QTR,YR,YTD,MAT1,MQT1,MAT12,MAT4,MM1,MM12,MM3,QQ1,QQ4,YTD1,YTD12,YTD4,YY1',
     select_yr = c(2010,2020)
 ){
 

@@ -19,7 +19,7 @@ tp_utils <- R6::R6Class(
 
 
     ,get_db_btrends = function(){
-        return(private$global_DB_BTRENDS)
+        return(private$global_DB)
     }
 
     ,get_db_indx = function(){
@@ -73,7 +73,16 @@ tp_utils <- R6::R6Class(
 
         return(y)
     }
+    ,to_proper_case =  function(txt){
 
+        return(
+            paste0(
+                toupper( substr(txt, 1, 1) ),
+                tolower( substr(txt, 2, nchar(txt)) )
+            )
+        )
+
+    }
 
   )
 
