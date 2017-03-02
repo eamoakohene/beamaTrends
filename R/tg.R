@@ -1139,8 +1139,8 @@ tg <- R6::R6Class(
         plot = function(
               is_growth = FALSE, select = NULL ,
               ops = 'avg', x_delta = c(0,0), y_delta = c(0,0),dp = 1, skale = 1 ,
-              skale_title = 'Value', title = NULL, select_yr = NULL,
-               strip_txt_size = 12, is_themed = F,
+              skale_title = 'Value', title = NULL, select_yr = NULL
+              ,strip_txt_size = 12, is_themed = F,
               line_col = beamaColours::get_corporate_blue(),
               strip_col = beamaColours::get_blue(),
               strip_fcol = 'white', brexit_mode = FALSE, brexit_mode_line = 0.8,

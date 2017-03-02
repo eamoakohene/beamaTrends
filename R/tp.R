@@ -979,7 +979,7 @@ tp <- R6::R6Class(
 #' @export
 #'
 #' @examples
-tp.view_ons_code <- function( code='ABMI', is_growth = F, select_yr=NULL, ops = 'avg',
+tp.view_ons_code <- function( code='ABMI', is_growth = F, select_yr=NULL, ops = 'avg', is_themed = T,
                               select = 'MAT,MTH,QTR,YR,YTD,MAT1,MQT1,MAT12,MAT4,MM1,MM12,MM3,QQ1,QQ4,YTD1,YTD12,YTD4,YY1'){
     #source('global.R')
 
@@ -1000,7 +1000,7 @@ tp.view_ons_code <- function( code='ABMI', is_growth = F, select_yr=NULL, ops = 
 
   bt <- tg$new(x=dt)
 
-  bt$plot( is_growth = is_growth, title = paste0( trimws( my_data$title ),' (',code,')' ), select = select , select_yr = select_yr, ops = ops)
+  bt$plot( is_growth = is_growth, title = paste0( trimws( my_data$title ),' (',code,')' ), select = select , select_yr = select_yr, ops = ops, is_themed = is_themed)
 
 }
 
@@ -1015,12 +1015,12 @@ tp.view_ons_code <- function( code='ABMI', is_growth = F, select_yr=NULL, ops = 
 #' @export
 #'
 #' @examples
-tp.view_code <- function( code='ABMI', is_growth = F, select=NULL, select_yr=NULL){
+tp.view_code <- function( code='ABMI', is_growth = F, select=NULL, select_yr=NULL, is_themed = T){
     #source('global.R')
 
   bt <- tg$new(x=code)
 
-  bt$plot( is_growth = is_growth, title = code, select = select , select_yr = select_yr)
+  bt$plot( is_growth = is_growth, title = code, select = select , select_yr = select_yr, is_themed = is_themed)
 
 }
 

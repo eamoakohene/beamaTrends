@@ -19,7 +19,7 @@ tp_utils <- R6::R6Class(
 
 
     ,get_db_btrends = function(){
-        return(private$global_DB)
+        return(private$global_DB_BTRENDS)
     }
 
     ,get_db_indx = function(){

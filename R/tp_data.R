@@ -299,16 +299,16 @@ tp_data.get_indx_all <-  function(indx='m_elec',y1=2000, y2=2020, path="W:/Libra
 
 tp_data.write_indx_xls <- function(indx='l_elec',y1=2000, cell_row = NULL, cell_col = NULL,y2=2020){
 
-  require(XLConnect)
-  set_cell_value <- function(wb,sheet,start_row,start_col,data){
-    writeWorksheet(wb, data=data, sheet = sheet, startRow = start_row, startCol = start_col,header=TRUE,rownames=NULL)
-  }
-
-
-  my_workbook <- loadWorkbook(global_XLS_HIST)
-  my_data <- tp_data.get_indx_all( indx = indx, y1=y1, y2=y2 )
-  set_cell_value(my_workbook,sheet = indx, start_row = cell_row, start_col = cell_col, data = my_data )
-  saveWorkbook(my_workbook)
+  # require(XLConnect)
+  # set_cell_value <- function(wb,sheet,start_row,start_col,data){
+  #   writeWorksheet(wb, data=data, sheet = sheet, startRow = start_row, startCol = start_col,header=TRUE,rownames=NULL)
+  # }
+  #
+  #
+  # my_workbook <- loadWorkbook(global_XLS_HIST)
+  # my_data <- tp_data.get_indx_all( indx = indx, y1=y1, y2=y2 )
+  # set_cell_value(my_workbook,sheet = indx, start_row = cell_row, start_col = cell_col, data = my_data )
+  # saveWorkbook(my_workbook)
 }
 
 tp_data.group_add_code <- function(code,grp){
