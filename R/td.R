@@ -94,7 +94,7 @@ td <- R6::R6Class(
 
             case_name <- switch( i,
              "1" = paste0( toupper( substr(txt, 1, 1) ),  substr(txt, 2, nchar(txt))   ),
-             "2" = self$to_proper_case(),
+             "2" = self$to_proper_case(txt),
              "3" = tolower( txt ),
              "4" = toupper( txt )
             )

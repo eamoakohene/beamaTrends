@@ -171,7 +171,7 @@ tp_data = R6::R6Class(
         for(i in 1:n_rows){
 
          #i=9
-          meta <- run_sql_btrends(
+          meta <- self$run_sql(
              sprintf("select data_unit, max(yr) as y1 from trends_data where data_code='%s'", my_data$code[i] )
           )
           meta_yr <- meta$y1[1]
@@ -203,10 +203,13 @@ tp_data = R6::R6Class(
 
       for(i in 1:n_rows){
 
-        meta <- run_sql_btrends(
+        upd_data <- self$run_sql(
           sprintf("update trends_data set data_desc ='%s' where data_code='%s'",my_data$description[i], my_data$code[i] )
         )
 
+        upd_meta <- self$run_sql(
+            sprintf("update trends_meta set data_desc ='%s' where data_code='%s'",my_data$description[i], my_data$code[i] )
+        )
         cat("Group: ",my_data$grp[i]," code:",my_data$description[i]," ",i,"/",n_rows, " done!\n" )
       }
     }
@@ -241,12 +244,18 @@ tp_data.update_groups <- function(){
 }
 
 tp_data.update_captions <- function(){
-  source("global.R")
+  #source("global.R")
+
   tp_data$new( 'topsi_orgalime' )$update_ons_captions()
+  tp_data$new( 'topsi' )$update_ons_captions()
   tp_data$new( 'iop_orgalime_core' )$update_ons_captions()
   tp_data$new( 'exports' )$update_ons_captions()
+  tp_data$new( 'exports1' )$update_ons_captions()
   tp_data$new( 'ppi_input_orgalime' )$update_ons_captions()
   tp_data$new( 'ppi_output_orgalime' )$update_ons_captions()
+  tp_data$new( 'emp_orgalime_core' )$update_ons_captions()
+  tp_data$new( 'bw_invest' )$update_ons_captions()
+
 }
 
 tp_data.data_export = function(code,dt1,dt2,fx,avg=T){

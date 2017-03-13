@@ -32,13 +32,14 @@ tp <- R6::R6Class(
     title ='',
     ylab = ' % Change ',
     colour = beamaColours::get_stats()[1],
-    dt_breaks="3 months",
-    dt_breaks_format="%b %Y",
+    dt_breaks= NULL,
+    dt_breaks_format= NULL,
     is_smooth=FALSE,
     dt_desc = '',
     freq = NULL,
     freq_default = 0,
     delta_x = 0,
+    delta_y = c(0,0),
     skale =1,
     caption_size = 4,
     point_size = c(2,4),
@@ -117,7 +118,7 @@ tp <- R6::R6Class(
     }
 
     ,set_brexit_mode = function(value){
-      if(!missing(value) && is.null(value) && is.logical(value)){
+      if(!missing(value) && !is.null(value)&& is.logical(value) ){
         self$brexit_mode <- value
       }
       invisible( self )
@@ -516,7 +517,7 @@ tp <- R6::R6Class(
     }
 
 
-    ,set_breaks = function(value){
+    ,set_breaks = function(value ){
       if(!missing(value) && !is.null(value)){
         self$dt_breaks <- value
       }
@@ -525,7 +526,7 @@ tp <- R6::R6Class(
 
     ,set_breaks_fmt = function(value){
       if(!missing(value) && !is.null(value)){
-        self$dt_breaks_fmt <- value
+        self$dt_breaks_format <- value
       }
       invisible(self)
     }
@@ -554,6 +555,18 @@ tp <- R6::R6Class(
       }
 
       invisible(self)
+    }
+
+    ,set_delta_y = function(y1,y2){
+
+        if(!missing(y1) && !is.null(y1)){
+            self$delta_y[1] <- y1
+        }
+        if(!missing(y2) && !is.null(y2)){
+            self$delta_y[2] <- y2
+        }
+
+        invisible(self)
     }
 
     ,get_line_colours = function(stats_first = FALSE){
@@ -604,8 +617,15 @@ tp <- R6::R6Class(
     }
 
 
-    ,plot_pc = function(brewer_set = "Set1", ytitle=NULL, dazzle=FALSE, encode = T){
-      require(ggplot2)
+    ,plot_pc = function(brewer_set = "Set1", ytitle=NULL, dazzle=FALSE, encode = T,
+                        is_themed = T,
+                        strip_col = beamaColours::get_blue(),
+                        strip_fcol = 'white'){
+
+        require(ggthemes)
+        require(magrittr)
+        require(ggplot2)
+
       my_data<- self$get_data( encode = encode)
 
 
@@ -649,74 +669,145 @@ tp <- R6::R6Class(
         gtxt <- rbind(gmin,gmax)
 
         #return(gtxt)
-
         if(!dazzle){
-          g <- ggplot(my_data,aes(x=date,y=pc))
-          g <- g + geom_line(size=self$line_size,colour = self$colour)
+
+            g <- ggplot(my_data,aes(x=date,y=pc))
+            g <- g + geom_line(size=self$line_size,colour = self$colour)
+
+
+
         }else{
           g <- ggplot(my_data,aes(x=date,y=pc,colour=factor(data_desc)))
 
           g <- g + geom_line(size = self$line_size, aes(colour=data_desc))
           g <- g + scale_color_manual(values= self$get_line_colours())
+          g <- g + guides(colour=FALSE)
         }
 
         g <- g + facet_wrap( ~ data_desc)
-        g <- g + guides(colour=FALSE)
-        # my_intercepts <- c(min(my_data$pc,na.rm=TRUE),max(my_data$pc,na.rm=TRUE))
-        #
 
-        g <- g+ geom_point( data=gtxt, aes( x = date, y = pc ) , size = self$point_size[2], colour = beamaColours::get_line_colour())
-        g <- g+ geom_point( data=gtxt, aes( x = date, y = pc ) , size = self$point_size[1], colour = beamaColours::get_pink())
-        g <- g+ geom_text(  data=gtxt, aes( x = date, y = pc, label = private$set_decimal( pc, self$dp) ),vjust=-0.8,hjust=0.4,size= self$caption_size,colour = beamaColours::get_smooth_colour())
-        g <- g+ theme(legend.position="none", strip.text = element_text(size = self$stripe_text_size ) )
 
-        #g <- g + geom_hline(yintercept=my_intercepts,colour=colour_set,linetype='dashed')
+        g <- g + geom_point( data=gtxt, aes( x = date, y = pc ) , size = self$point_size[2], colour = beamaColours::get_line_colour())
+        g <- g + geom_point( data=gtxt, aes( x = date, y = pc ) , size = self$point_size[1], colour = beamaColours::get_pink())
+        g <- g + geom_text(  data=gtxt, aes( x = date, y = pc, label = private$set_decimal( pc, self$dp) ),vjust=-0.8,hjust=0.4,size= self$caption_size,colour = beamaColours::get_smooth_colour())
+        g <- g + theme(legend.position="none", strip.text = element_text(size = self$stripe_text_size ) )
+
+
+
+
       }else{
 
         g <- ggplot(my_data, aes(x=date,y=pc,colour=data_code))
         g <- g + geom_line( aes(group=data_code),size = self$line_size)
+
         g <- g+ theme(
           legend.position = c(self$legend_x, self$legend_y),
           legend.background = element_rect(fill = NA, colour = NA),#lgpos$fill
           legend.title=element_blank(),
-          text = element_text(12)
+          text = element_text(size= self$stripe_text_size)
         )
         g <- g+ scale_colour_brewer( palette = brewer_set )
 
       }
 
-      g <- g + labs(title= self$title,x="",y = my_ylab)
-      g <- g + geom_hline(aes(yintercept=0))
+      g <- g + labs( title= self$title, x="", y = my_ylab)
+      g <- g + geom_hline( aes(yintercept=0) )
 
-
-
-      if( !(self$y_lim[1] == 0) ){
-        g <- g + ylim( self$y_lim )
-      }
 
       if( !(self$delta_x == 0) ){
 
         min_date <- as.Date( paste( gmin$yr[1], gmin$mth[1], 28,sep='-'))
         max_date <- as.Date( paste( gmax$yr[1], gmax$mth[1], 28,sep='-'))
 
-        #return(list(min_date,max_date))
 
         lubridate::month(max_date) <- lubridate::month(max_date) + self$delta_x
         lubridate::month(min_date) <- lubridate::month(min_date) - self$delta_x
 
-        ##test
-        #return(list(min_date,max_date))
-        ###
-
-        g <- g + theme(strip.text = element_text( size= self$stripe_text_size ))
-
-        g <- g + xlim( min_date,max_date )
       }
 
-      if(self$brexit_mode){
+      if(! is.null(self$dt_breaks)  ){
+         cat('dt_breaks not null')
+          if(! is.null(self$dt_breaks_format)){
 
+              if(!(self$delta_x == 0) ){
+                  cat("self$delta_x not zero")
+                  g <- g + scale_x_date(date_breaks = self$dt_breaks, date_labels = self$dt_breaks_format, limits = c(min_date,max_date))
+              }else{
+                  g <- g + scale_x_date(date_breaks = self$dt_breaks, date_labels = self$dt_breaks_format)
+              }
+
+          }else{
+
+              if(!(self$delta_x == 0) ){
+                  g <- g + scale_x_date(date_breaks = self$dt_breaks, limits = c(min_date,max_date))
+              }else{
+                  g <- g + scale_x_date(date_breaks = self$dt_breaks)
+              }
+          }
+
+      }else{
+          cat('dt_breaks is null')
+
+
+              if(!(self$delta_x == 0) ){
+                  cat("self$delta_x not zero")
+                  g <- g + scale_x_date( limits = c(min_date,max_date))
+              }
+
+
+      }
+
+
+      if(self$brexit_mode == T){
+       cat("brexit mode true")
         g <- g + geom_vline( aes(xintercept = as.numeric(as.Date( BREXIT_POINT )) ), colour = beamaColours::get_pink(), linetype = 'dashed', size= 1  )
 
+      }else{
+          cat("brexit mode false")
+      }
+
+      ##
+
+      g_range <- ggplot_build(g)$layout$panel_ranges[[1]]$y.range
+
+      y_range <- g_range
+
+
+      if( !( self$delta_y[1] == 0) ){
+
+          if( g_range[1] < 0 ) {
+              y_range[1] <- g_range[1] + self$delta_y[1]
+          }else{
+              y_range[1] <- g_range[1] - self$delta_y[1]
+          }
+
+      }
+
+      if(!( self$delta_y[2] == 0)){
+          if( g_range[2] < 0 ) {
+              y_range[2] <- g_range[2] - self$delta_y[2]
+          }else{
+              y_range[2] <- g_range[2] + self$delta_y[2]
+          }
+      }
+
+      if( !( sum(self$delta_y) == 0) ) {
+          g <- g + ylim( y_range )
+      }
+
+      ##
+
+
+      if(is_themed){
+          g <- g + theme_igray()
+          g <- g + scale_colour_tableau("colorblind10")
+          g <- g + theme(
+              strip.background = element_rect(colour = strip_col, fill = strip_col),
+              strip.text.x = element_text(colour = strip_fcol, size= self$stripe_text_size),
+              legend.position = "none",
+              legend.title = element_blank()
+
+          )
       }
 
       print(g)

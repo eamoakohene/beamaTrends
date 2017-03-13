@@ -28,6 +28,7 @@ BREXIT_POINT = "2016-06-23"
 
 tg <- R6::R6Class(
     "tg",
+    inherit = tp_utils,
 
     public = list(
 
@@ -1139,7 +1140,7 @@ tg <- R6::R6Class(
         plot = function(
               is_growth = FALSE, select = NULL ,
               ops = 'avg', x_delta = c(0,0), y_delta = c(0,0),dp = 1, skale = 1 ,
-              skale_title = 'Value', title = NULL, select_yr = NULL
+              skale_title = 'Value', title = NULL, select_yr = NULL,x_breaks = '1 years', x_format='%Y'
               ,strip_txt_size = 12, is_themed = F,
               line_col = beamaColours::get_corporate_blue(),
               strip_col = beamaColours::get_blue(),
@@ -1269,31 +1270,51 @@ tg <- R6::R6Class(
             }
 
             if(!( y_delta[2] == 0)){
+
                 if( g_range[2] < 0 ) {
+
                     y_range[2] <- g_range[2] - y_delta[2]
+
                 }else{
+
                     y_range[2] <- g_range[2] + y_delta[2]
+
                 }
+
             }
 
             #cat("yrange = c(", y_range[1]," , ", y_range[2],")\n")
 
-            if( (y_range[1]*y_range[2]) < 0 ){
-                g <- g + geom_hline(yintercept = 0)
+            if( ( y_range[1] * y_range[2] ) < 0 ){
+
+                g <- g + geom_hline( yintercept = 0)
+
             }
 
             if( !( sum(y_delta) == 0) ) {
+
                 g <- g + ylim( y_range )
+
             }
 
             if( !( sum(x_delta) == 0 ) ){
-                g <- g + xlim( x_range )
+
+                g <- g + scale_x_date(date_breaks = x_breaks, date_labels = x_format, limits = x_range )
+
+            }else{
+
+                g <- g + scale_x_date(date_breaks = x_breaks, date_labels = x_format )
+
             }
 
             if(brexit_mode){
+
               g <- g + geom_vline( aes(xintercept = as.numeric(as.Date( BREXIT_POINT )) ), colour = beamaColours::get_pink(), linetype = 'dashed', size= brexit_mode_line )
+
             }
+
             print(g)
+
             return(gtxt)
 
         }
@@ -1697,15 +1718,16 @@ tg.plot_trends<- function(
             }
         }
 
+        if( !( sum(y_delta) ==0) ) {
+            g <- g + ylim( y_range )
+        }
+
         #cat("yrange = c(", y_range[1]," , ", y_range[2],")\n")
 
         if( (y_range[1]*y_range[2]) <0 ){
             g <- g + geom_hline(yintercept = 0)
         }
 
-        if( !( sum(y_delta) ==0) ) {
-            g <- g + ylim( y_range )
-        }
 
         if( !( sum(x_delta) == 0 ) ){
             g <- g + xlim( x_range )
@@ -1737,6 +1759,7 @@ tg.plot_trends<- function(
         g <- g + theme_igray()
         g <- g + scale_colour_tableau("colorblind10")
         g <- g + theme(
+
             strip.background = element_rect(colour = strip_col, fill = strip_col),
             strip.text.x = element_text(colour = strip_fcol, size = strip_txt_size),
 

@@ -1,4 +1,4 @@
-# abc <- onsR2::download('ABMI')$q_data
+# abc <- onsR2::download('CHAW')$m_data
 # abc <- 'USDM'
 # cde <- beamaTrends::tg$new(abc)
 # cde$plot()
@@ -179,3 +179,32 @@
 #   "PCU3311103311103", "PCU3315133315131","PCU3315133315133", "PCU3321113321111","PCU3311103311105",
 #
 #)
+
+###### orgalime vienna
+#GRAPHIC_PATH <- 'M:/2017-03-09-vienna-orgalime/graphics/'
+
+#1. TURNOVER
+
+#1.1 Turnover - GBP-yr
+# beamaTrends::tp$new(
+#     beamaTrends::tp_data$new('topsi_orgalime')$get_group(T)
+# )$set_y1( 2012 )$set_y2( 2016 )$set_avg(F)$set_fx('y')$set_scale(1000)$set_delta_x(4)$set_pc('0')$set_dp(1)$plot_pc(ytitle="Annual Turnover (GBP billion)")
+# beamaTrends::tp_utils$new()$plot_save('turnover_gbp_yr',path = GRAPHIC_PATH)
+#
+# #1.2 Turnover - PC-yr
+# beamaTrends::tp$new(
+#     beamaTrends::tp_data$new('topsi_orgalime')$get_group(T)
+# )$set_y1( 2011 )$set_y2( 2016 )$set_avg(F)$set_fx('y')$set_scale(1)$set_delta_x(4)$set_delta_y(0,3)$set_pc('1')$set_dp(1)$plot_pc(ytitle="Annual Growth (%)")
+# beamaTrends::tp_utils$new()$plot_save('turnover_pc_yr',path = GRAPHIC_PATH)
+
+# #1.3 Turnover - GBP-mth
+# beamaTrends::tp$new(
+#     beamaTrends::tp_data$new('topsi_orgalime')$get_group(T)
+# )$set_y1( 2014 )$set_y2( 2016 )$set_avg(F)$set_fx('m')$set_scale(1000)$set_delta_x(4)$set_delta_y(0,0)$set_pc('0')$set_dp(1)$plot_pc(ytitle="Monthly Turnover (GBP billion)")
+# beamaTrends::tp_utils$new()$plot_save('turnover_gbp_mth',path = GRAPHIC_PATH)
+
+#1.4 Turnover - GBP-mth
+# beamaTrends::tp$new(
+#     beamaTrends::tp_data$new('topsi_orgalime')$get_group(T)
+# )$set_y1( 2014 )$set_y2( 2016 )$set_breaks("1 year")$set_breaks_fmt("%Y")$set_avg(F)$set_fx('m')$set_scale(1)$set_delta_x(2)$set_delta_y(0,0)$set_pc('12')$set_dp(1)$plot_pc(ytitle="Monthly Growth(%)")
+# beamaTrends::tp_utils$new()$plot_save('turnover_pc_mth',path = GRAPHIC_PATH)
