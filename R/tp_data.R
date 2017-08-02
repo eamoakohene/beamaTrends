@@ -30,8 +30,9 @@ tp_data = R6::R6Class(
     ),
     grp = NULL
 
-    ,initialize = function( grp){
-      self$set_group(grp)
+    ,initialize = function( grp, db_name = NULL){
+        super$initialize( db_name )
+        self$set_group(grp)
     }
 
     ,set_group = function(value){
@@ -256,6 +257,7 @@ tp_data.update_captions <- function(){
   tp_data$new( 'emp_orgalime_core' )$update_ons_captions()
   tp_data$new( 'bw_invest' )$update_ons_captions()
 
+
 }
 
 tp_data.data_export = function(code,dt1,dt2,fx,avg=T){
@@ -265,6 +267,7 @@ tp_data.data_export = function(code,dt1,dt2,fx,avg=T){
   data_format <- tidyr::spread( data_raw, data_code, value )
   tp$new()$to_clipboard( data_format )
   return( data_format )
+
 }
 
 tp_data.get_bases <- function(indx='m_elec'){
@@ -352,3 +355,6 @@ tp_data.group_add_groups <- function(grp){
         }
     }
 }
+
+
+
