@@ -272,6 +272,7 @@ td <- R6::R6Class(
             return(mtm_sc_msg)
 
         }
+
         ,get_mtm = function(  is_yoy = FALSE ){
 
             mtm_data <- NULL
@@ -422,8 +423,9 @@ td <- R6::R6Class(
         ,get_growth_since = function( dt1 = '2016-06-22', dt2 = NULL, by = c('y','m','q','d'), is_brexit = F){
 
             my_ts <- self$data_ts
+            my_ref <- stats::end( my_ts )
             my_dt1 <- as.Date( dt1 )
-            my_dt2 <- NULL
+            my_dt2 <- dt2
             my_data <- NULL
 
             my_by <- match.arg( by )
@@ -474,6 +476,7 @@ td <- R6::R6Class(
                   'm' = c(2016,5),
                   'd' = as.Date('2016-06-22')
                 )
+
             }else{
 
                 s_win1 <- switch(
@@ -498,6 +501,8 @@ td <- R6::R6Class(
                     'd' = my_dt2
                 )
 
+
+
             }
 
 
@@ -517,6 +522,8 @@ td <- R6::R6Class(
 
                         n_items <- length( my_data )
                         growth_since <- (my_data[ n_items ] - my_data[ 1 ])/my_data[ 1 ]*100
+
+
 
                         if( is.null( dt2 )){
 
@@ -589,8 +596,9 @@ td <- R6::R6Class(
 
 
 
-            return( list( txt = growth_text, x = growth_since) )
+            return( list( txt = growth_text, x = growth_since, ref = stats::end( my_data)) )
         }
+
         ,get_hilow  = function( k = 1, is_low = TRUE, dp = 1 ){
 
             my_data <- td.delt(self$data_ts, k = k, percent = T, dp = dp)
@@ -603,6 +611,7 @@ td <- R6::R6Class(
 
 
             if(is_low ){
+
                 my_data_logic <- (my_data <= my_data_last)
 
                 if( self$data_freq == 12 ){
@@ -621,6 +630,7 @@ td <- R6::R6Class(
 
                 }
             }else{
+
                 my_data_logic <- (my_data >= my_data_last)
 
                 if( self$data_freq == 12 ){
@@ -665,6 +675,7 @@ td <- R6::R6Class(
             return( my_text )
 
         }
+
         ,get_hilows = function(){
 
            hl <- " %s \n %s \n %s \n %s"
@@ -740,6 +751,63 @@ td.delt <- function(x, k= 1 , percent = FALSE, dp = NULL){
     }
 
 }
+
 td.delt_code <- function(x, k= 1 , percent = T, dp = 1){
     td.delt( tg$new( x )$data_ts, k = k, percent = percent, dp = dp )
+}
+
+td.get_indicator_growth <- function (indicator, dt1 = c(2016,6), dt2 = NULL, is_brexit = T ){
+
+    my_code <-  indicator
+
+    my_dt1 <- sprintf("%s-%s%s-01", dt1[ 1 ], ifelse( dt1[2] > 9,'','0') , dt1[ 2 ])
+
+    my_dt2 <- dt2
+
+    if(! is.null( dt2) ){
+        my_dt2 <- sprintf("%s-%s%s-01", dt2[ 1 ], ifelse( dt2[2] > 9,'','0') , dt2[ 2 ])
+    }
+
+
+    abc_info <- beamaTrends::tp.run_sql( sprintf("select data_frq, data_desc from trends_meta where data_code='%s'", my_code))
+
+    abc_by <- switch(
+        as.character(abc_info$data_frq),
+        '12' = 'm',
+        '4' = 'q',
+        '1' ='y'
+    )
+
+    abc_data <- beamaTrends::td$new(my_code)$get_growth_since(dt1 = my_dt1, dt2 = my_dt2, by = abc_by, is_brexit = is_brexit)
+    abc_value <- abc_data$x
+
+    abc_ref <- switch( abc_by,
+                       'm'= sprintf("%s %s",month.abb[ abc_data$ref[2]], abc_data$ref[ 1]),
+                       'q' = sprintf("Q%s %s", abc_data$ref[2], abc_data$ref[ 1]),
+                       'y' = sprintf("%s", abc_data$ref[ 1])
+    )
+
+    df <- data.frame( x = abc_info$data_desc, y = abc_value, lbl_in = abc_value, lbl_out = abc_ref, code = my_code   )
+    return( df)
+}
+
+td.get_brexit_indicators <- function(
+    indicators = "USDM,EURM,K646,D7BT,IKBH,K222,BQKU,CT2AM-AW,BQKR,S2KU,JVZ7,K22A,KAB9,ABMI-UKEA,NPEL,J5EK,CHAW,BQKS,L87S,L87U,DYDC,JT27,CT2AM-ANW,CT2AM-ARM"
+    ,dt1 = c(2016,6)
+    ,dt2 = NULL
+    ,is_brexit = T
+){
+
+    codes <- strsplit( indicators,',')[[1]]
+
+    my_df <- td.get_indicator_growth( codes[ 1 ], dt1 = dt1, dt2 = dt2, is_brexit = is_brexit)
+
+    for( i in 2:length( codes )){
+        cat('Now on code = ',codes[i],'\n')
+        my_df <- rbind(my_df, td.get_indicator_growth( codes[ i ], dt1 = dt1, dt2 = dt2, is_brexit = is_brexit)    )
+
+    }
+
+    return( my_df)
+
 }

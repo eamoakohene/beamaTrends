@@ -54,6 +54,7 @@ tg <- R6::R6Class(
         data_growth_fx = NULL, # growth periodicity
         data_code = NULL,
         data_days = NULL,
+        db_agg = 'sum',
 
 
         db_sql = NULL, #query to fetch data from database
@@ -71,7 +72,7 @@ tg <- R6::R6Class(
 
 
 
-        initialize = function(x, x_start=NULL, x_frq = NULL, db_limit = list(yr=NULL, mth=12), db_name = NULL ){
+        initialize = function(x, x_start=NULL, x_frq = NULL, db_limit = list(yr=NULL, mth=12), db_name = NULL, db_agg = 'sum' ){
 
             super$initialize( db_name )
 
@@ -111,6 +112,15 @@ tg <- R6::R6Class(
                 cat("Invalid growth rate \n")
             }
             invisible(self)
+        },
+
+        set_db_agg = function( value){
+
+            if(!is.null(value) ){
+                self$db_agg <- value
+            }
+            invisible(self)
+
         },
 
         set_db_limit = function(value){
@@ -175,6 +185,20 @@ tg <- R6::R6Class(
 
         },
 
+        generate_data_code = function(){
+            return(
+                paste0(
+                    'btrends-',
+                    lubridate::year(   Sys.Date() ), '-',
+                    lubridate::month(  Sys.Date() ), '-',
+                    lubridate::day(    Sys.Date() ), '-',
+                    lubridate::hour(   Sys.Date() ),
+                    lubridate::minute( Sys.Date() ),
+                    lubridate::seconds(Sys.Date() )
+                )
+            )
+
+        },
         #' set format of original data
         set_data_format = function(value){
 
@@ -204,15 +228,7 @@ tg <- R6::R6Class(
 
                     if(!(my_format == self$UNKNOWN)){
 
-                        self$data_code <- paste0(
-                            'btrends-',
-                            lubridate::year(   Sys.Date() ), '-',
-                            lubridate::month(  Sys.Date() ), '-',
-                            lubridate::day(    Sys.Date() ), '-',
-                            lubridate::hour(   Sys.Date() ),
-                            lubridate::minute( Sys.Date() ),
-                            lubridate::seconds(Sys.Date() )
-                        )
+                        self$data_code <- self$generate_data_code()
 
                     }
                 }
@@ -420,8 +436,21 @@ tg <- R6::R6Class(
                     where2 <- sprintf(" and data_days <= %s ", self$data_days )
                 }
 
-                sql1 <- "select yr,mth,data_code,data_value as value from trends_data where "
-                sql2 <-  sprintf(" upper( data_code) in ('%s') %s order by yr, mth", toupper( self$data_raw ), where2)
+                is_multi_code <- length( ( grep(",", self$data_code) == 1 ) ) >0
+
+
+                sql1 <- sql2 <- NULL
+
+                if(!is_multi_code){
+                    sql1 <- "select yr,mth,data_code,data_value as value from trends_data where "
+                    sql2 <-  sprintf(" upper( data_code) in ('%s') %s order by yr, mth", toupper( self$data_raw ), where2)
+
+                }else{
+
+                    sql1 <-  sprintf("select a.yr, a.mth,'%s' as data_code , %s(a.data_value) as value from trends_data a where ", self$generate_data_code(), self$db_agg )
+                    sql2 <-  sprintf(" upper( a.data_code) in %s %s group by a.yr, a.mth order by a.yr, a.mth", toupper( beamaUtils::split_str( self$data_raw )) , where2)
+                }
+
                 self$db_sql <-  paste0( sql1, sql2 )
             }
             return( self$db_sql)
@@ -468,6 +497,8 @@ tg <- R6::R6Class(
         set_db_ts_properties = function(){
 
             self$db_df <- my_data <- self$db_run_sql()
+            #my_data$data_days <- (my_data$yr * 12 + my_data$mth) * 31 + my_data$dy
+            #my_data <- dplyr::arrange( my_data, data_days)
             #cat('DB = ', self$db_name,'\n')
             #cat('SQL = ', self$db_sql,'\n')
 
@@ -478,7 +509,13 @@ tg <- R6::R6Class(
 
 
 
-            if( is.null( self$data_start) ){ self$data_start <- c( my_data$yr[ 1 ], my_data$mth[ 1 ] )}
+            if( is.null( self$data_start) ){
+
+                self$data_start <- c( my_data$yr[ 1 ], my_data$mth[ 1 ] )
+
+            }
+
+            #cat('ts_start yr= ', my_data$yr[ 1 ],' ts_start mth=', my_data$mth[ 1 ],' my_data qtr = ', my_data$qtr[ 1],' ts_freq = ', self$data_freq,'\n')
 
             if( is.null( self$data_freq)){
 
@@ -492,9 +529,11 @@ tg <- R6::R6Class(
 
                     if(self$data_freq == 4){
 
-                        self$data_start <- c( my_data$yr[ 1 ], my_data$qtr[ 1 ] )
+                        self$data_start <- c( my_data$yr[ 1 ], my_data$mth[ 1 ]/3 )
 
                     }
+
+                    #cat('ts_start yr= ', self$data_start[ 1 ],' ts_start mth=', self$data_start[ 2 ],'my_data qtr = ',my_data$qtr[1 ],' ts_freq = ', self$data_freq,'\n')
 
 
                 }else if( nrow(my_yrs) >0){
@@ -554,8 +593,6 @@ tg <- R6::R6Class(
 
         },
 
-
-
         db_get_freq = function(){
 
             if(!is.null( self$db_freq)){
@@ -579,20 +616,14 @@ tg <- R6::R6Class(
             self$db_get_freq()
         },
 
-
-
         db_set_name = function(value){
 
             self$set_db_name( value )
         },
 
-
-
         db_get_name = function(){
             self$get_db()
         },
-
-
 
         set_data_df =function(){
 
@@ -705,9 +736,8 @@ tg <- R6::R6Class(
                 if( self$data_agg_to == self$MTH){
 
                     self$data_agg <- self$data_ts
-                }
 
-                if( self$data_agg_to == self$MQT ){
+                } else if( self$data_agg_to == self$MQT ){
 
                     if(is_sum){
                         self$data_agg <- zoo::rollsumr( self$data_ts, k = 3 )
@@ -1230,7 +1260,7 @@ tg <- R6::R6Class(
 
             #get code description
             code_desc <- ''
-            SQ <- storedQry::SQ$new( tg.get_db( 'trends' ) )$set_name( 'trends_meta_get_desc' )
+            SQ <- storedQry::SQ$new( self$db_name )$set_name( 'trends_meta_get_desc' )
             my_desc <- SQ$set_params( list( `@s_code`= toupper(self$data_code)  ) )$qry_exec()
             if(nrow(my_desc) >0 ){
                 code_desc <- my_desc$description[1]
@@ -1252,6 +1282,7 @@ tg <- R6::R6Class(
                                        MM3   = self$to_df( self$get_mm3(), 'MM3', T),
                                        MM12  = self$to_df( self$get_mm12(), 'MM12', T),
                                        QQ1   = self$to_df( self$get_qq1( ops = ops ), 'QQ1', T),
+                                       YTD1   = self$to_df( self$get_ytd1( ops = ops ), 'YTD1', T),
 
                                        QQ4   = self$to_df( self$get_qq4( ops = ops ), 'QQ4', T),
                                        YY1   = self$to_df( self$get_yy1( ops = ops ), 'YY1', T),
@@ -1269,6 +1300,11 @@ tg <- R6::R6Class(
                                        MAYTDM12 = self$to_df( self$get_maytdm1( ops = ops ), 'MAYTDM12', T)
 
                     )
+
+                    my_data <- sqldf::sqldf(
+                        sprintf("select * from my_data where name in %s and yr between %s and %s", beamaUtils::split_str( toupper( select ) ), select_yr[1], select_yr[2])
+                    )
+
                 }else{
 
                     my_mm1  <- self$to_df( self$get_mm1(), 'MM1', T)
@@ -1328,6 +1364,11 @@ tg <- R6::R6Class(
                                        MAYTDQ1= self$to_df( self$get_maytdq1( ops = ops ), 'MAYTDQ1', T),
                                        MAYTDQ4= self$to_df( self$get_maytdq4( ops = ops ), 'MAYTDQ4', T)
                     )
+
+                    my_data <- sqldf::sqldf(
+                        sprintf("select * from my_data where name in %s and yr between %s and %s", beamaUtils::split_str( toupper( select ) ), select_yr[1], select_yr[2])
+                    )
+
 
                 }else{
 
@@ -1433,8 +1474,9 @@ tg <- R6::R6Class(
                 my_data <- self$to_df( self$data_ts, 'YR', T )
 
 
+
                 my_data <- sqldf::sqldf(
-                    sprintf("select * from my_data where yr between %s and %s", select_yr[1], select_yr[2])
+                    sprintf("select * from my_data where name in %s and yr between %s and %s", beamaUtils::split_str( toupper(select ) ), select_yr[1], select_yr[2])
                 )
 
                 return( my_data  )
@@ -1482,6 +1524,7 @@ tg <- R6::R6Class(
             return_plot = F, font_text = "Museo 300", font_title = "Museo 500",
             growth_title = NULL, line_size = 1.2
 
+
         ){
 
             require(ggplot2)
@@ -1513,6 +1556,7 @@ tg <- R6::R6Class(
             }else{
 
                 my_data <- self$get_growth_df(ops = ops, select = my_select, select_yr = my_select_yr)
+
 
                 if(is.null(growth_title)){
                     my_ylab <- "Growth (%)"
@@ -1713,13 +1757,15 @@ tg <- R6::R6Class(
             }
 
 
+
+
             print(g)
 
             if(return_plot){
                 return( g )
             }else{
 
-              return(gtxt)
+              return(my_data)
             }
 
         }
@@ -1742,7 +1788,14 @@ tg <- R6::R6Class(
                 beamaColours::get_yellow(),
                 beamaColours::get_green()
             ),
-            font_text = "Museo 300", font_title = "Museo 500"
+            font_text = "Museo 300", font_title = "Museo 500",
+
+            show_growth_caps = F,
+            caps_x = c(1, 1, -1, -1),
+            caps_y = c(1,-1, -1,  1),
+            caps_lbl = c('EXPANSION','RECOVERY','CONTRACTION','SLOWDOWN'),
+            caps_col = gray.colors(10)[7],
+            caps_size = 8
         ){
 
             require("magrittr")
@@ -1841,6 +1894,7 @@ tg <- R6::R6Class(
             delta <- 0.2
 
 
+            gdata <- dplyr::filter(gdata, yr >= y1, yr<= y2)
 
             gdata$data_days <- with( gdata, yr * 372 + mth * 31  )
             gmin <- dplyr::filter( gdata, !is.na( yoy ))  %>% dplyr::filter( data_days == min( data_days ))
@@ -1914,6 +1968,18 @@ tg <- R6::R6Class(
                 )
             }
 
+            if(show_growth_caps){
+
+                g <- g + annotate(
+                    'text',
+                    x = caps_x,
+                    y = caps_y,
+                    label = caps_lbl,
+                    size = caps_size,
+                    colour = caps_col
+                )
+
+            }
 
             print( g )
 
@@ -2029,10 +2095,11 @@ tg.get_data <- function(code="CHAW,CHAY",y1=1990,y2=2020,m1=1,m2=12, d1=0,d2=0 ,
     return( my_data )
 }
 
-tg.sync_desc <- function(code, description){
+tg.sync_desc <- function(code, description, db = tg.get_db( 'trends' )){
+
 
     #first update the meta table
-    SQ <- storedQry::SQ$new( tg.get_db( 'trends' ) )$set_name( 'trends_meta_update_desc' )
+    SQ <- storedQry::SQ$new( db )$set_name( 'trends_meta_update_desc' )
     my_qry <- SQ$set_params(
         list(
             `@s_data_code`=code, `@s_data_desc`= description
@@ -2040,7 +2107,7 @@ tg.sync_desc <- function(code, description){
     )$qry_exec()
 
     #then update table
-    SQ <- storedQry::SQ$new( tg.get_db( 'trends' ) )$set_name( 'trends_data_update_desc' )
+    SQ <- storedQry::SQ$new( my_db )$set_name( 'trends_data_update_desc' )
     my_qry <- SQ$set_params(
         list(
             `@s_data_code`=code, `@s_data_desc`= description
@@ -2050,10 +2117,11 @@ tg.sync_desc <- function(code, description){
 
 }
 
-tg.get_unit <- function(code){
+tg.get_unit <- function(code, db = tg.get_db( 'trends' ) ){
 
 
-    SQ <- storedQry::SQ$new( tg.get_db( 'trends' ) )$set_name( 'trends_meta_get_unit' )
+
+    SQ <- storedQry::SQ$new( db )$set_name( 'trends_meta_get_unit' )
     my_unit <- SQ$set_params(
         list(
             `@s_code`= code
@@ -2256,7 +2324,8 @@ tg.get_agg_data <- function(
     code='m_elec,k646', ops = 'avg',
     select = 'MAT,MTH,QTR,YR,YTD',
     select_yr = c(2010,2020),
-    meta_info = NULL
+    meta_info = NULL,
+    db = NULL
 ){
 
     #code <- 'bbt_combined,bbt_total_ins,bbt_total_ene,bbt_total_wel'; select='MAT'; select_yr = c(2017,2017)
@@ -2269,13 +2338,13 @@ tg.get_agg_data <- function(
 
     if( my_n_codes > 0){
 
-        my_df <- tg$new( my_split[1] )$get_agg_df( ops = ops, select = select, select_yr = select_yr)
+        my_df <- tg$new( my_split[1], db_name = db )$get_agg_df( ops = ops, select = select, select_yr = select_yr)
         my_df$code <- my_split[1]
 
         if( my_n_codes > 1){
             for(j in 2: my_n_codes ){
                 #j = 2
-                my_sub_df <- tg$new( my_split[ j ] )$get_agg_df( ops = ops, select = select, select_yr = select_yr)
+                my_sub_df <- tg$new( my_split[ j ], db_name = db )$get_agg_df( ops = ops, select = select, select_yr = select_yr)
                 my_sub_df$code <- my_split[ j ]
                 my_df <- rbind ( my_df, my_sub_df )
 
@@ -2296,7 +2365,7 @@ tg.get_agg_data <- function(
 
     my_meta <- meta_info
     if( is.null( meta_info )){
-        my_meta <- tp_utils$new()$run_sql(
+        my_meta <- tp_utils$new( db_name = db )$run_sql(
             sprintf(
                 "select data_code as code, data_desc from trends_meta where lower(data_code) in %s",
                 tolower(
@@ -2317,7 +2386,8 @@ tg.get_agg_data <- function(
 tg.get_growth_data <- function(
     code='m_elec,k646', ops = 'avg',
     select = 'MAT1,MQT1,MAT12,MAT4,MM1,MM12,MM3,QQ1,QQ4,YTD1,YTD12,YTD4,YY1',
-    select_yr = c(2010,2020)
+    select_yr = c(2010,2020),
+    db = NULL
 ){
 
     #code <- "m_elec"
@@ -2329,11 +2399,11 @@ tg.get_growth_data <- function(
 
     if( my_codes_n > 0){
 
-        my_df <- tg$new( my_split[1] )$get_growth_df( ops = ops, select = select, select_yr = select_yr)
+        my_df <- tg$new( my_split[1], db_name = db )$get_growth_df( ops = ops, select = select, select_yr = select_yr)
 
         if( my_codes_n > 1){
             for(j in 2:my_codes_n ){
-                my_sub_df <- tg$new( my_split[ j ] )$get_growth_df( ops = ops, select = select, select_yr = select_yr)
+                my_sub_df <- tg$new( my_split[ j ], db_name = db  )$get_growth_df( ops = ops, select = select, select_yr = select_yr)
                 my_df <- rbind (my_df, my_sub_df)
             }
         }
@@ -2354,10 +2424,10 @@ tg.get_growth_data <- function(
     return(my_df)
 }
 
-tg.sync_currency <- function(src_code = 'USD', dst_code ='USDM', yr =1980){
+tg.sync_currency <- function(src_code = 'USD', dst_code ='USDM', yr =1980, db = tg.get_db( 'trends' ) ){
 
     cat('Syncing started ',src_code,' ...\n')
-    SQ <- storedQry::SQ$new( tg.get_db( 'trends' ) )$set_name( 'trends_data_sync_daily_to_month' )
+    SQ <- storedQry::SQ$new( db )$set_name( 'trends_data_sync_daily_to_month' )
     my_upd <- SQ$set_params(
         list(
             `@s_src_code` = toupper(src_code),
@@ -2371,7 +2441,8 @@ tg.sync_currency <- function(src_code = 'USD', dst_code ='USDM', yr =1980){
     cat('All done - syncing completed !!!\n')
 }
 
-tg.sync_currencies <- function( yr = lubridate::year(Sys.Date()) ){
+
+tg.sync_currencies <- function( yr = lubridate::year(Sys.Date()), db = tg.get_db( 'trends' ) ){
 
     tg.sync_currency('USD','USDM', yr = yr)
     tg.sync_currency('EUR','EURM', yr = yr)
@@ -2380,8 +2451,9 @@ tg.sync_currencies <- function( yr = lubridate::year(Sys.Date()) ){
     tg.sync_currency('AUD','AUDM', yr = yr)
     tg.sync_currency('INR','INRM', yr = yr)
     tg.sync_currency('BRLM','BRLM', yr = yr)
+    tg.sync_currency('TDI-FTSE-100','FTSEM', yr = yr)
 
-    SQ <- storedQry::SQ$new( tg.get_db( 'trends' ) )$set_name("trends_update_periods")$qry_exec()
+    SQ <- storedQry::SQ$new( db )$set_name("trends_update_periods")$qry_exec()
 }
 
 tg.get_info <- function(q='ABMI',is_code = F, is_link = F, db = tpu.get_db() ){
@@ -2400,9 +2472,40 @@ tg.get_info <- function(q='ABMI',is_code = F, is_link = F, db = tpu.get_db() ){
 
     return(my_data)
 }
-#tg.get_info()
+#tg.get_info('PG-BEAMA',db = PG_DB,is_code=T)
 #tg.get_info(is_link = T)
 #tg.get_info(is_code = T)
+
+tg.goto_src <- function(q = 'ABMI'){
+    #q = "J5EK"
+    qry <- sprintf("select data_src_url from trends_meta where lower(data_code) = '%s'", tolower(trimws(q)) )
+    my_data <- tp_utils$new( tpu.get_db() )$run_sql( qry )
+
+    if( nrow(my_data) > 0 ){
+
+        my_link <- my_data$data_src_url[1]
+
+        if(! (is.na(my_link) || is.null(my_link)) ){
+            if( nchar( my_link ) > 5){
+
+                cat('Going to source ...', my_link,'\n')
+                utils::browseURL( my_link )
+
+            }else{
+
+                cat(sprintf('Life is too short but %s link is really SHORT. Bailing out ....\n', my_link))
+            }
+        }else{
+
+            cat(sprintf('No link for code %s. Bailing out ....\n',q))
+        }
+    }else{
+
+        cat('Ghost link! Bailing out ....\n')
+
+    }
+
+}
 
 tg.get_group_links <- function(grp){
 

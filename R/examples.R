@@ -322,25 +322,36 @@
 #tp.plot_regression_code( 'usdm',   'eurm', fx='qtr',k='4',select_yr=c(2010,2017), sig_fig = 2)
 #tp.plot_regression_code( 'eurm',   'usdm', fx='qtr',k='4',select_yr=c(2010,2017), sig_fig = 2)
 
-#tp.view_spider('D7BT')
-#tp.view_spider('D7BT', fx = 'qtr')
+#beamaTrends::tp.view_spider('D7BT')
+#beamaTrends::tp.view_spider('D7BT', fx = 'qtr')
 #tp.view_spider('D7BT', fx = 'qtr', k=2)
 #tp.view_spider('D7BT', fx = 'qtr', y1=2007)
-#tp.view_spider('D7BT', fx = 'mat', y1=2007)
+#tp.view_spider('D7BT', fx = 'mat', y1=2012,is_brexit=T)
 #tp.view_spider('D7BT', fx = 'mat', y1=2014, k=3)
-#tp.view_spider('D7BT', fx = 'mat', y1=2014, k=6)
+#tp.view_spider('D7BT', fx = 'mat', y1=2013, k=6,is_brexit=T)
+#abc <- tp.view_spider('D7BT', fx = 'mat', y1=2014, k=12)
+#tp.view_spider('D7BT', fx = 'mat', y1=2014, k=12,is_brexit=T)
+
+#beamaTrends::tp.view_spider('D7BT')
+#beamaTrends::tp.view_spider('D7BT', fx = 'qtr')
+#tp.view_spider('D7BT', fx = 'qtr', k=2)
+#tp.view_spider('D7BT', fx = 'qtr', y1=2007)
+#tp.view_spider('D7BT', fx = 'mat', y1=2012,is_brexit=T)
+#tp.view_spider('D7BT', fx = 'mat', y1=2014, k=3)
+#tp.view_spider('D7BT', fx = 'mat', y1=2013, k=6,is_brexit=T)
 #abc <- tp.view_spider('D7BT', fx = 'mat', y1=2014, k=12)
 #tp.view_spider('D7BT', fx = 'mat', y1=2014, k=12,is_brexit=T)
 
 
 #tp.view_spider('k646', fx = 'mat', y1=2014, k=3)
 #tp.view_spider('k646', fx = 'mat', y1=2014, k=6)
-#tp.view_spider('k646', fx = 'mat', y1=2014, k=12)
+#tp.view_spider('k646', fx = 'mat', y1=2010, k=12 ,is_brexit=T)
 
-#tp.view_spider('usdm', fx = 'mat', y1=2014, k=3)
-#tp.view_spider('usdm', fx = 'mat', y1=2014, k=6)
-#tp.view_spider('usdm', fx = 'mat', y1=2014, k=9)
-#tp.view_spider('usdm', fx = 'mat', y1=2014, k=12)
+#tp.view_spider('EURM', fx = 'mat', y1=2014, k=3)
+#tp.view_spider('EURM', fx = 'mat', y1=2014, k=6)
+#tp.view_spider('EURM', fx = 'mat', y1=2014, k=9)
+#tp.view_spider('EURM', fx = 'mat', y1=2007, k=12, is_brexit = T)
+#tp.view_spider('USDM', fx = 'mat', y1=2007, k=12, is_brexit = T)
 #tp.view_spider('eurm', fx = 'mat', y1=2014, k=12)
 #tp.view_spider('CT2AM-AW', fx = 'mat', y1=2015, k=12)
 #tp.view_spider('CT2AM-AW', fx = 'ytd', y1=2014, k=12)
@@ -352,6 +363,11 @@
 #tp.view_spider('usdm', fx = 'ytd', y1=2015, k=12)
 
 # abc <- tg_ons$new('DYDC')$add_trends_data(x = window(dt,start=c(1990,1)) )
+
+#tp.view_spider('dydc', fx = 'mat', y1=2012, k=4, is_brexit = T)
+#tp.view_spider('mgsc', fx = 'mat', y1=2012, k=12, is_brexit = T)
+#tp.view_spider('dydc', fx = 'qtr', y1=2014, k=4, is_brexit = T)
+#tp.view_spider('abmi-ukea', fx = 'ytd', y1=2012, k=4, is_brexit = T)
 
 
 # require(ggplot2)
@@ -405,7 +421,9 @@
 #beamaTrends::td$new('K646')$get_growth_since(by='m',dt1='2003-01-01', is_brexit = F)
 #beamaTrends::td$new('K646')$get_growth_since(by='m',dt1='2003-01-01',dt2='2015-01-01', is_brexit = F)
 #beamaTrends::td$new('ABMI')$get_growth_since(by='q',dt1='2016-03-01', is_brexit = F)
-#beamaTrends::td$new('ABMI')$get_growth_since(by='q',dt1='2013-03-01', dt2='2017-03-01', is_brexit = F)
+#beamaTrends::td$new('ABMI-UKEA')$get_growth_since(by='q',dt1='2015-06-01', dt2='2016-06-01', is_brexit = F)
+#beamaTrends::td$new('ABMI-UKEA')$get_growth_since(by='q',dt1='2016-06-01', dt2='2017-10-01', is_brexit = F)
+
 
 #beamaTrends::td$new('K646')$get_hilow(k=12,is_low = T)
 #beamaTrends::td$new('K646')$get_hilow(k=1,is_low = T)
@@ -483,9 +501,9 @@
 
 # x <- bistats::pg.get_indx_ts('TOTAL')
 # a <- window(x,c(2003,1),c(2015,12))
-# b <- window(x,c(2016,1),c(2017,6))
-# tfo <- tf$new(a)$set_ahead(2)
-# fco <- tfo$get_fcs(avg_excl = NULL, avg_join = b, is_spread = FALSE)
+# b <- window(x,c(2016,1),c(2017,8))
+# tfo <- tf$new(a)$set_ahead(2)$set_method_packed('arima,thetaf,mapa,bsts')
+# fco <- tfo$get_fcs(avg_excl = 'x12', avg_join = b, is_spread = FALSE)
 # tf$new(a)$plot_fcs( plot_excl = NULL, fcs_object = fco, avg_join = 1)
 # head(tfo$recalc_forecast_avg(fco = fco, avg_only = T, is_spread = T), 20)
 # head( tfo$recalc_forecast_avg(fco = fco,is_spread = T, avg_excl = 'rwf,bsts,meanf,holtw,holt', avg_only = T),20)
@@ -500,3 +518,144 @@
  # fco <- tf$get_fcs( avg_excl = NULL, avg_join = b, is_spread = FALSE)
  # tf$plot_fcs( plot_excl = 'rwf,meanf,thetaf', fcs_object = fco, avg_join = 1, excl_limits = T)
 
+
+# (
+#     total_fc <- tf$new(
+#
+#         bistats::pg.get_indx_ts('BEAMA')
+#
+#     )$set_ahead( 2 )$set_method_packed( 'x12,arima,mapa' )$set_x12_exe_path(
+#
+#           'C:/apps/WinX13/x13as/x13as.exe'
+#
+#     )$set_x12_output_path(
+#
+#        'C:/apps/WinX13/output/'
+#
+#      )$get_fcs( avg_only = T)
+#
+# )
+
+# beamaTrends::tp.plot_brexit_indicators(
+#
+#     indicators =  'USDM,EURM,K646,D7BT'
+#     ,out_gap = 15
+#     ,dt1 = c(2016,6)
+#     ,dt2 = c(2017,10)
+#     ,title = 'UK Economic Indicators'
+#     ,is_brexit = F
+#     ,is_smart = T
+#     ,smart = ESMART_LABELS
+#     ,ytitle ='Growth since June 2016'
+# )
+#
+
+# abc =  beamaTrends::tg$new(
+#     beamaTrends::tp_data$new('topsi_orgalime')$get_group(T)
+# )$plot(
+#     select = 'YR',select_yr =c(2000,2017), x_delta = c(1,1), y_delta =c(0,0), skale =1000,
+#     skale_title = "Monthly Turnover (GBP billion)", is_themed = T, x_breaks = '2 years', smart_labels = list(YR = 'Orgalime Turnover - NACE 25,26,27,28,33')
+# )
+#
+
+# beamaTrends::tg$new(
+#     beamaTrends::tp_data$new('topsi_orgalime')$get_group(T)
+# )$plot(
+#     T,select = 'YY1', select_yr =c(2013,2016), x_delta = c(1,1), y_delta =c(1,1), skale =1, ops = 'avg',
+#     skale_title = "Annual Growth (%)", is_themed = T, x_breaks = '1 years', smart_labels = list(YY1 = 'Orgalime Turnover - NACE 25,26,27,28,33')
+#     #,brexit_mode = T
+# )
+
+# beamaTrends::tg$new(
+#     beamaTrends::tp_data$new('emp_orgalime_core')$get_group(T)
+# )$plot(
+#     is_growth = T,
+#     select = 'YY1',select_yr =c(2013,2017), x_delta = c(1,1), y_delta =c(0,0.5), skale =1, ops = 'avg',
+#     skale_title = "Growth - Employed Persons (yoy%)", is_themed = T, x_breaks = '1 years', smart_labels = list(YY1 = 'Orgalime Employment - NACE 25,26,27,28,33')
+#     #,brexit_mode = T
+# )
+# beamaTrends::tp_utils$new()$plot_save('employment_yr_combined_pc',path = GRAPHIC_PATH, skale = 3)
+
+
+# my_smart = list(
+#      USD='US Dollar ($)'
+#     ,EUR = 'Euro (€)'
+#     ,JPY = 'Japanese (¥)'
+#     ,CNY = 'Chinese Yuan Renminbi (¥)'
+#     ,INR = 'Indian Rupee'
+#     ,BRL = ' Brazillian Real (R$)'
+# )
+#
+#
+# tp$new(
+#     'USD,EUR,JPY,CNY,BRL,INR'
+# )$set_y1( 2014 )$set_y2( 2017 )$set_avg(T)$set_fx('m')$set_breaks(
+#     "1 year")$set_breaks_fmt("%Y")$set_min_max(F)$set_scale(1)$set_colour(
+#         beamaColours::get_grayblue())$set_delta_x(2)$set_delta_y(0,0)$set_pc('12')$set_dp(1)$plot_pc(
+#             strip_col= beamaColours::get_grayblue(), min_max_days = 100,
+#             smart_labels = my_smart, is_smart =T, ytitle = "12-month % change"
+#         )
+
+
+# smart_caps_emp <- list(
+#     `PROD-SIC-26` = '26 - Electronics',
+#     `PROD-SIC-27` = '27 - Electrical',
+#     `PROD-SIC-28` = '28 - Mechanical',
+#     `PROD-SIC-25` = '25 - Fabricated Metals',
+#     `PROD-SIC-33` = '33 - Repairs & Installation',
+#     `PROD-SIC-29` = '29 - Motor Vehicles',
+#     `PROD-SIC-30` = '30 - Other Transport',
+#     `PROD-SIC-C`  = 'C - Total Manufacturing'
+#
+# )
+# beamaTrends::tp$new(
+#     "PROD-SIC-25,PROD-SIC-26,PROD-SIC-27,PROD-SIC-28,PROD-SIC-33,PROD-SIC-29,PROD-SIC-30,PROD-SIC-C" #beamaTrends::tp_data$new('emp_orgalime_core')$get_group(T)
+# )$set_y1( 2000 )$set_y2( 2020 )$set_avg(F)$set_fx('q')$set_breaks(
+#     "5 years")$set_breaks_fmt("%Y")$set_min_max(F)$set_scale(1)$set_brexit_mode(
+#         T)$set_colour(beamaColours::get_euris_blue_light())$set_delta_x(2)$set_delta_y(0,0)$set_pc('4')$set_dp(1)$plot_pc(
+#             ytitle="Output / Head (GBP)",strip_col= beamaColours::get_euris_blue(),
+#             smart_labels = smart_caps_emp, is_smart =T
+#)
+
+
+# wh_all <- paste(whlist, sep="",collapse = ",")
+# wh_top_list <-  c('EDMUNDSON','FEGIME','ANEW','OTHERS','ELECTRICCENTRE','NEWEY')
+# wh_top <- paste(wh_top_list,sep="",collapse = ",")
+# wh_bot_list <- c('AWEBB','CEF','DENMANS','WFSENATE','WILTS','YESSS','SCREWFIX','RETAIL')
+# wh_bot <- paste(wh_bot_list, sep = "", collapse = ",")
+# retail_list <- c('SCREWFIX','RETAIL')
+# retail_all <- paste( retail_list, sep = '', collapse = ',')
+#
+# wh_smart <- list(
+#     OTHERS = 'OTHER WHOLESALERS',
+#     ELECTRICCENTRE = 'ELECTRIC CENTRE',
+#     WFSENATE = 'WF SENATE',
+#     RETAIL = 'OTHER RETAILERS'
+# )
+# beamaTrends::tp$new(
+#     paste('PG', wh_top_list,sep='-',collapse = ','), db = bistats::bistats_utils$new()$get_db()
+# )$set_yintercept(100)$set_y1( 2015 )$set_y2( 2020 )$set_avg(T)$set_fx('m')$set_breaks(
+#     "1 year")$set_breaks_fmt("%Y")$set_min_max(T)$set_scale(1)$set_brexit_mode(
+#         F)$set_delta_x(2)$set_delta_y(0,0)$set_pc('0')$set_dp(0)$plot_pc(
+#             min_max_days = 100,
+#             smart_labels = wh_smart, is_smart =T, ytitle = "Index (Jan 2013 = 100)"
+#         )
+
+# df_share <- bistats::pg.get_data(y1 = 2014)
+# df_share <- sqldf::sqldf("select yr,mth,wholesaler,sum(total) as total from df_share group by yr,mth,wholesaler ")
+# df_share <- dplyr::mutate(
+#     dplyr::group_by( df_share, yr,  mth),
+#     pc = 100*( total / sum(total) ),
+#     dy = 1,
+#     data_desc = wholesaler
+# )
+#
+# names(df_share) <- c('yr','mth','data_code','value','pc','dy','data_desc')
+#
+# beamaTrends::tp$new(
+#     df_share
+# )$set_y1( 2014 )$set_y2( 2020 )$set_avg(T)$set_fx('m')$set_breaks(
+#     "1 year")$set_breaks_fmt("%Y")$set_min_max(T)$set_scale(1)$set_delta_x(
+#         2)$set_delta_y(0,0)$set_pc('0')$set_dp(0)$plot_pc(
+#             min_max_days = 100, is_smart =T, ytitle = "Market Share (%)"
+#         )

@@ -64,7 +64,10 @@ tp_data = R6::R6Class(
     }
 
     ,view_current = function(code){
-      sql <- sprintf("select * from trends_data where data_code='%s' order by yr desc, mth desc, dy desc limit 10",code)
+      sql <- sprintf(
+           "select * from trends_data where data_code='%s' order by yr desc, mth desc, dy desc limit 10", code
+    )
+      cat(sql, '\n')
       self$run_sql(sql)
     }
 
@@ -255,7 +258,10 @@ tp_data.update_captions <- function(){
   tp_data$new( 'ppi_input_orgalime' )$update_ons_captions()
   tp_data$new( 'ppi_output_orgalime' )$update_ons_captions()
   tp_data$new( 'emp_orgalime_core' )$update_ons_captions()
+
   tp_data$new( 'bw_invest' )$update_ons_captions()
+  tp_data$new( 'bw_construction' )$update_ons_captions()
+  tp_data$new( 'bw_construction_qtr' )$update_ons_captions()
 
 
 }
@@ -277,7 +283,9 @@ tp_data.get_bases <- function(indx='m_elec'){
 }
 
 tp_data.update_periods <- function(){
-  global_SQ_BT()$set_name('trends_update_periods')$qry_exec()
+
+    storedQry::SQ$new( tp_utils$new()$get_db() )$set_name('trends_update_periods')$qry_exec()
+
 }
 
 
@@ -356,5 +364,25 @@ tp_data.group_add_groups <- function(grp){
     }
 }
 
+tp_data.get_ftse <- function( dpy = 0.25, csv_path = 'R:/data/ftse100.csv' ){
 
+    ftse <- read.csv( csv_path, header = T, stringsAsFactors = FALSE)
+    ftse$mth <- lubridate::month(ftse$date)
+    ftse$yr <- lubridate::year(ftse$date)
+    ftse$dy <- lubridate::day(ftse$date)
+
+    sql_base <- "insert into trends_data (yr,mth,dy,data_code,data_value) values (%s,%s,%s,'%s', %s);"
+    sql <- sprintf( sql_base, ftse$yr, ftse$mth, ftse$dy,  'TDI-FTSE-100', ftse$value)
+    sql_n <- length(sql)
+
+    loop_start <- round(dpy*255 + 1, 0)
+
+    for(i in loop_start:sql_n ){
+        beamaTrends::tp.run_sql( sql[ i ])
+        cat("Completed row ",i," of ", sql_n,'\n' )
+    }
+    beamaTrends::tp_data.update_periods()
+
+    #beamaTrends::tg.sync_currency('TDI-FTSE-100','FTSEM', yr = 2009)
+}
 

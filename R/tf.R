@@ -49,6 +49,7 @@ tc <- R6::R6Class(
             }
             invisible(self)
         }
+
         ,set_method_packed = function(value){
 
             if(!missing(value) ){
@@ -57,7 +58,6 @@ tc <- R6::R6Class(
             }
             invisible(self)
         }
-
 
         ,set_ahead = function(value){
             if(!missing(value) ){
@@ -76,6 +76,7 @@ tc <- R6::R6Class(
             }
             invisible(self)
         }
+
         ,set_interval = function(value){
             if(!missing(value) ){
                 self$fc_interval <- value
@@ -178,7 +179,6 @@ tc <- R6::R6Class(
 
             return(self$data_ts)
         }
-
 
         ,set_properties = function(){
 
@@ -302,6 +302,7 @@ tc <- R6::R6Class(
             return(self$fc_data)
 
         }
+
         ,fc_splinef = function(){
 
             cat("entering fc_splinef \n")
@@ -445,6 +446,26 @@ tf<- R6::R6Class(
                 self$x12_spec_filename <- value
                 invisible(self)
             }
+        }
+
+        ,set_x12_exe_path = function(value){
+
+            if(!missing(value) ){
+                if(!is.null(value)){
+                    self$x12_exe_path <- value
+                }
+            }
+            invisible(self)
+        }
+
+        ,set_x12_output_path = function(value){
+
+            if(!missing(value) ){
+                if(!is.null(value)){
+                    self$x12_output_dir <- value
+                }
+            }
+            invisible(self)
         }
 
         ,clear_temp = function(){
@@ -1084,8 +1105,25 @@ tf<- R6::R6Class(
 
 ) #class
 
+tf.quick_forecast <- function( code, fc_method = 'x12,mapa' ,fx = 'yr' ,is_growth = F, ahead = 2, yr_end = lubridate::year(Sys.Date()) + ahead, yr_delta = ahead, title = NULL, ops = 'avg'){
 
+    cd <- code
+    ts_data <- beamaTrends::tp.view_data( cd )
+    frq <- frequency( ts_data )
+    df_fc <- beamaTrends::tf$new(
+        cd
+    )$set_ahead( ahead )$set_method_packed( fc_method )$get_fcs( avg_only = T)
 
+    ts_fc <- ts( df_fc$forecast, start=c(df_fc$yr[1], df_fc$mth[ 1 ] ), frequency = frq )
 
+    ts_cmd <- ts( c(ts_data, ts_fc), start=start( ts_data), frequency = frq )
+    my_tg <- beamaTrends::tg$new( ts_cmd )
 
+    #return( my_tg)
+    my_data <- window( my_tg$set_agg( fx , ops )$get_agg(), start = c(start(ts_data )[1],1), end = c(yr_end, frq ) )
+
+    beamaTrends::tp.view_code( round(my_data,4), is_growth = is_growth, select_yr = c(yr_end - yr_delta , yr_end), title = title)
+
+    return( my_data)
+}
 

@@ -349,3 +349,11 @@ tg_ons <- R6::R6Class(
     ),
     private = list()
 )
+
+# beamaTrends::tg_ons$new(code='RPQM-UKEA', desc='GDP-Household Expenditure (HH & NPISH)',unit='GBP million',frq_str='q', is_auto = T)$set_delay_update(T)$add_trends_data()
+# beamaTrends::tg_ons$new(code='HAYO-UKEA', desc='GDP-Non-profit institutions serving households (NPISH)',unit='GBP million',frq_str='q', is_auto = T)$set_delay_update(T)$add_trends_data()
+# beamaTrends::tg_ons$new(code='NMRY-UKEA', desc='GDP-General Government expenditure( P3)',unit='GBP million',frq_str='q', is_auto = T)$set_delay_update(T)$add_trends_data()
+# beamaTrends::tg_ons$new(code='NPQT-UKEA', desc='GDP-Gross Fixed Capital Formation (GFCF)',unit='GBP million',frq_str='q', is_auto = T)$set_delay_update(T)$add_trends_data()
+# beamaTrends::tg_ons$new(code='CAFU-UKEA', desc='GDP-Inventories changes',unit='GBP million',frq_str='q', is_auto = T)$set_delay_update(T)$add_trends_data()
+# beamaTrends::tg_ons$new(code='IKBK-UKEA', desc='GDP-Exports of Goods & Services',unit='GBP million',frq_str='q', is_auto = T)$set_delay_update(T)$add_trends_data()
+# beamaTrends::tg_ons$new(code='IKBL-UKEA', desc='GDP-Imports of Goods & Services',unit='GBP million',frq_str='q', is_auto = T)$set_delay_update(F)$add_trends_data()

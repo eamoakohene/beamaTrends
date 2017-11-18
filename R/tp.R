@@ -1,10 +1,54 @@
 #extrafont::font_import()
 
+ESMART_LABELS =  list(
+
+    USDM="Exchange - US Dollar",
+    EURM="Exchange - Euro",
+    `ABMI-UKEA`="Gross Domestic Product",
+    ABMI="Gross Domestic Product",
+    K646="PPI - Input Prices",
+    D7BT = "Consumer Price Index",
+    IKBH = "Exports - Value",
+    IKBI = "Imports - Value",
+    BQKU = 'Exports - Volume Index',
+    BQKR = 'Exports - Price Index',
+    K222 = 'Index of Production',
+    NPEL = 'Business Investment',
+    `CT2AM-AW` = 'Construction Output',
+    `CT2AM-ANW` = 'Construction New Work',
+    `CT2AM-ARM` = 'Construction Repairs',
+    S2KU = 'Index of Services',
+    JVZ7 = 'PPI - Output Prices',
+    K22A = 'Index of Manufacturing',
+    CHAW = 'Retail Price Index',
+    `OECD/MEI_CLI_LOLITOAA_GBR_M`='OECD Leading Indicator',
+    J5EK = 'Retail Sales Index (volume)',
+    KAB9 = 'Average Weekly Earnings',
+    BQKS = 'Imports Price Index',
+    L87S = 'Goods Exports to EU',
+    L87U = 'Goods Imports from EU',
+    L87M = 'Goods Exports to NonEU',
+    L87O = 'Goods Imports from NonEU',
+    DYDC = 'Employment',
+    MGSX = 'Unemployment',
+    JT27 = 'Manufacturing Output',
+    `RPQM-UKEA` = 'Household & NPHIS Expenditure',
+    `HAYO-UKEA` = 'Non-profit Ins. serving households',
+    `NMRY-UKEA` = 'General Government expenditure',
+    `NPQT-UKEA` = 'Gross Fixed Capital Formation',
+    `CAFU-UKEA` = 'Inventories changes',
+    `IKBK-UKEA` = 'Exports of Goods & Services',
+    `IKBL-UKEA` = 'Imports of Goods & Services',
+    `ABJR-UKEA` = 'Household Final Consumption'
+
+)
+GLANCE_INDICATORS = "USDM,EURM,K646,D7BT,IKBH,K222,BQKU,CT2AM-AW,BQKR,S2KU,JVZ7,K22A,KAB9,ABMI-UKEA,NPEL,J5EK,CHAW,BQKS,L87S,L87U,DYDC,JT27,CT2AM-ANW,CT2AM-ARM,OECD/MEI_CLI_LOLITOAA_GBR_M"
+
 #' R6 class for Trends plot
 #' td = Trends Plot
 #'
 tp <- R6::R6Class(
-    'tp',
+#    'tp',
     inherit = tp_utils,
 
     public = list(
@@ -17,6 +61,7 @@ tp <- R6::R6Class(
         d1=1,
         d2=31,
         code = NULL,
+        df = NULL, #must have columns (yr, mth, data_code, pc, dy, data_desc)
         fx = 'm',
         fx_list = c('d','m','q','y','mt','qt','yt','ms','qs','ys','mc','qc','yc'),
         fx_level = 2,
@@ -51,6 +96,7 @@ tp <- R6::R6Class(
         facet_cols = NULL,
         show_min_max = T,
         db_limit = list(yr=NULL, mth= NULL),
+        yintercept = 0,
         #PAIRED = c("#377EB8","#E41A1C"),
 
 
@@ -59,7 +105,17 @@ tp <- R6::R6Class(
         initialize = function(code , db_name = NULL){
 
             super$initialize( db_name )
-            self$set_codes(code)
+
+            if(!is.data.frame( code )){
+
+                self$set_codes(code)
+
+            }else{
+
+                self$self_df(code)
+
+            }
+
             self$set_brexit_text()
 
         }
@@ -91,6 +147,7 @@ tp <- R6::R6Class(
             invisible(self)
 
         }
+
         ,set_caption_size = function(value){
 
             if(!missing(value) && !is.null(value)){
@@ -108,6 +165,7 @@ tp <- R6::R6Class(
             invisible(self)
 
         }
+
         ,set_min_max = function(value){
 
             if(!missing(value) && !is.null(value)){
@@ -130,6 +188,7 @@ tp <- R6::R6Class(
             invisible(self)
 
         }
+
         ,set_dp = function(value){
 
             if(!missing(value) && !is.null(value)){
@@ -147,6 +206,7 @@ tp <- R6::R6Class(
             invisible(self)
 
         }
+
         ,set_stripe_size = function(value){
             if(!missing(value) && is.null(value)){
                 self$stripe_text_size <- value
@@ -268,15 +328,35 @@ tp <- R6::R6Class(
         }
 
         ,set_codes = function(value){
+
             if(!missing(value) && !is.null(value)){
                 self$code <- private$split_str( value )
             }
             invisible(self)
+
         }
+
+        ,set_df = function(value){
+
+            if(!missing(value) && !is.null(value)){
+
+                self$df <- value
+
+            }
+            invisible(self)
+        }
+
 
         ,set_pc = function(value){
             if(!missing(value) && !is.null(value)){
                 self$pc <- value
+            }
+            invisible(self)
+        }
+
+        ,set_yintercept = function(value){
+            if(!missing(value) && !is.null(value)){
+                self$yintercept <- value
             }
             invisible(self)
         }
@@ -294,15 +374,15 @@ tp <- R6::R6Class(
 
                 if(my_avg){
 
-                    my_sql <- "select yr,qtr,data_code,data_desc,avg(data_value)  as value from trends_data "
-                    my_group <- " group by yr,qtr,data_code"
-                    my_order <- " order by yr,qtr,data_code,data_desc "
+                    my_sql <- "select a.yr, a.qtr, a.data_code, b.data_desc, avg(a.data_value)  as value from trends_data a, trends_meta b "
+                    my_group <- " group by yr,qtr, a.data_code"
+                    my_order <- " order by yr,qtr, a.data_code, b.data_desc "
 
                 }else{
 
-                    my_sql <- "select yr,qtr,data_code,data_desc,sum(data_value)  as value from trends_data "
-                    my_group <- " group by yr,qtr,data_code "
-                    my_order <- " order by yr,qtr,data_code,data_desc "
+                    my_sql <- "select a.yr, a.qtr, a.data_code, b.data_desc, sum(a.data_value)  as value from trends_data a, trends_meta b "
+                    my_group <- " group by yr,qtr, a.data_code "
+                    my_order <- " order by yr,qtr, a.data_code, b.data_desc "
 
                 }
 
@@ -310,15 +390,15 @@ tp <- R6::R6Class(
 
                 if(my_avg){
 
-                    my_sql <- "select yr,mth,data_code,data_desc,avg(data_value)  as value from trends_data "
-                    my_group <- "group by yr,mth,data_code"
-                    my_order <- " order by yr,mth,data_code,data_desc "
+                    my_sql <- "select a.yr, a.mth, a.data_code, b.data_desc, avg(a.data_value)  as value from trends_data a, trends_meta b "
+                    my_group <- "group by yr,mth,a.data_code"
+                    my_order <- " order by yr,mth,a.data_code, b.data_desc "
 
                 }else{
 
-                    my_sql <- "select yr,mth,data_code,data_desc,sum(data_value)  as value from trends_data "
-                    my_group <- " group by yr,mth,data_code"
-                    my_order <- " order by yr,mth,data_code,data_desc "
+                    my_sql <- "select a.yr, a.mth, a.data_code, b.data_desc,sum(a.data_value)  as value from trends_data a, trends_meta b "
+                    my_group <- " group by yr,mth, a.data_code"
+                    my_order <- " order by yr,mth, a.data_code, b.data_desc "
 
                 }
 
@@ -326,15 +406,15 @@ tp <- R6::R6Class(
 
                 if(my_avg){
 
-                    my_sql <- "select yr,data_code,data_desc,avg(data_value)  as value from trends_data "
-                    my_group <- " group by yr,data_code "
-                    my_order <- " order by yr,data_code,data_desc "
+                    my_sql <- "select a.yr,1 as mth, a.data_code, b.data_desc, avg(a.data_value)  as value from trends_data a, trends_meta b "
+                    my_group <- " group by yr, a.data_code "
+                    my_order <- " order by yr, a.data_code, b.data_desc "
 
                 }else{
 
-                    my_sql <- "select yr,data_code,data_desc,sum(data_value)  as value from trends_data"
-                    my_group <- " group by yr,data_code "
-                    my_order <- " order by yr,data_code,data_desc "
+                    my_sql <- "select a.yr, 1 as mth, a.data_code, b.data_desc, sum(a.data_value)  as value from trends_data a, trends_meta b"
+                    my_group <- " group by yr, a.data_code "
+                    my_order <- " order by yr, a.data_code, b.data_desc "
 
                 }
 
@@ -358,8 +438,8 @@ tp <- R6::R6Class(
 
             }else if(my_fx=='d'){
 
-                my_sql <- "select yr,mth,dy,data_code,data_desc,data_value  as value from trends_data "
-                my_order <- " order by yr,mth,dy,data_code,data_desc "
+                my_sql <- "select a.yr, a.mth, a.dy, a.data_code, b.data_desc, a.data_value  as value from trends_data a, trends_meta b "
+                my_order <- " order by yr,mth,dy, a.data_code, b.data_desc "
 
             }else if (my_fx=='ms'){
 
@@ -373,7 +453,7 @@ tp <- R6::R6Class(
 
             }else if (my_fx=='ys'){
 
-                my_sql <- paste0("SELECT yr, substr(data_code, 6, length(data_code) - ",fx_level+6,") AS wrap, sum(data_value) as value  FROM trends_data ")
+                my_sql <- paste0("SELECT yr,1 as mth, substr(data_code, 6, length(data_code) - ",fx_level+6,") AS wrap, sum(data_value) as value  FROM trends_data ")
                 my_group <- " group by yr,wrap "
 
             }else if (my_fx=='mc'){
@@ -388,117 +468,148 @@ tp <- R6::R6Class(
 
             }else if (my_fx=='yc'){
 
-                my_sql <- paste0("SELECT yr, ( substr(data_code, instr(data_code,'EXP')+instr(data_code,'IMP'), length(data_code))) AS wrap, sum(data_value) as value  FROM trends_data")
+                my_sql <- paste0("SELECT yr,1 as mth, ( substr(data_code, instr(data_code,'EXP')+instr(data_code,'IMP'), length(data_code))) AS wrap, sum(data_value) as value  FROM trends_data")
                 my_group <- " group by yr,wrap "
 
             }
 
 
-            q_code <- paste0(" data_code in ", self$code )
-            q_yr <- paste0(" and (yr between ", self$y1, " and ", self$y2, ")")
-            q_mth <- paste0(" and (mth between ", self$m1 ," and ", self$m2, ")")
-            q_where <- paste0(" where ",q_code,q_yr,q_mth)
+            my_prd_len <- nchar(my_fx)
+            qry_where <-" where "
+            qw_code <- qw_yr <- qw_mth <- sql_where <- ""
+            TRENDS_DATA_WHERE = " and a.data_code = b.data_code "
 
-            my_sql <- paste0(my_sql,q_where,my_group,my_order)
+            if(my_prd_len > 1){
+
+                qw_code <- base::paste0(" data_code in ", self$code )
+                qw_yr <- base::paste0(" and (yr between ", self$y1," and ", self$y2,")")
+                qw_mth <- base::paste0(" and (mth between ", self$m1," and ", self$m2,")")
+                sql_where <- base::paste0( qry_where, qw_code, qw_yr, qw_mth )
+
+            }else{
+
+                qw_code <- base::paste0(" a.data_code in ", self$code )
+                qw_yr <- base::paste0(" and (a.yr between ", self$y1," and ", self$y2 ,")")
+                qw_mth <- base::paste0(" and (a.mth between ", self$m1," and ", self$m2,")")
+                sql_where <- base::paste0( qry_where, qw_code, qw_yr, qw_mth, TRENDS_DATA_WHERE)
+
+            }
+
+            # q_code <- paste0(" data_code in ", self$code )
+            # q_yr <- paste0(" and (yr between ", self$y1, " and ", self$y2, ")")
+            # q_mth <- paste0(" and (mth between ", self$m1 ," and ", self$m2, ")")
+            # q_where <- paste0(" where ",q_code,q_yr,q_mth)
+
+
+            my_sql <- paste0( my_sql, sql_where, my_group, my_order)
             return(my_sql)
         }
 
         ,get_data = function( encode = T){
 
-            my_data <- self$run_sql( self$build_sql() )
-            my_fx <- self$fx
-            my_pc <- my_k <- as.numeric(self$pc)
+            if(! is.null( self$code)){
+                    my_data <- self$run_sql( self$build_sql() )
+                    my_fx <- self$fx
+                    my_pc <- my_k <- as.numeric(self$pc)
 
 
-            if(nrow(my_data)>0){
+                    if(nrow(my_data)>0){
 
-                my_data$value <- round(as.numeric(as.character(my_data$value)),4)
+                        my_data$value <- round(as.numeric(as.character(my_data$value)),4)
 
-                if((my_fx=="m") || (my_fx=='mt')|| (my_fx=='ms')|| (my_fx=='mc')){
-                    my_data$dy <- 1
-                    if(my_fx=='mt'){
-                        my_data$data_code <- self$code
-                        my_data$data_desc <- 'dummy-desc'
-                    }
-                    if((my_fx=="ms")|| (my_fx=="mc")){
-                        my_data$data_code <- my_data$wrap
-                        my_data$data_desc <- my_data$data_code
-                    }
-                }
-                if((my_fx=="q") || (my_fx=="qt")|| (my_fx=="qs")|| (my_fx=="qc")){
-                    my_data$dy <- 1
-                    my_data$mth <- my_data$qtr*3
-                    if(my_fx=='qt'){
-                        my_data$data_code <- self$code
-                        my_data$data_desc <- 'dummy-desc'
-                    }
+                        if((my_fx=="m") || (my_fx=='mt')|| (my_fx=='ms')|| (my_fx=='mc')){
+                            my_data$dy <- 1
+                            if(my_fx=='mt'){
+                                my_data$data_code <- self$code
+                                my_data$data_desc <- 'dummy-desc'
+                            }
+                            if((my_fx=="ms")|| (my_fx=="mc")){
+                                my_data$data_code <- my_data$wrap
+                                my_data$data_desc <- my_data$data_code
+                            }
+                        }
+                        if((my_fx=="q") || (my_fx=="qt")|| (my_fx=="qs")|| (my_fx=="qc")){
+                            my_data$dy <- 1
+                            my_data$mth <- my_data$qtr*3
+                            if(my_fx=='qt'){
+                                my_data$data_code <- self$code
+                                my_data$data_desc <- 'dummy-desc'
+                            }
 
-                    if((my_fx=="qs")|| (my_fx=="qc")){
-                        my_data$data_code <- my_data$wrap
-                        my_data$data_desc <- my_data$data_code
-                    }
-                }
+                            if((my_fx=="qs")|| (my_fx=="qc")){
+                                my_data$data_code <- my_data$wrap
+                                my_data$data_desc <- my_data$data_code
+                            }
+                        }
 
-                if((my_fx=="y")||(my_fx=="yt")||(my_fx=="ys")||(my_fx=="yc")){
-                    my_data$dy <- 1
-                    my_data$mth <-1
-                    if(my_fx=='yt'){
-                        my_data$data_code <- self$code
-                        my_data$data_desc <- 'dummy-desc'
-                    }
-                    if((my_fx=="ys")|| (my_fx=="yc")){
-                        my_data$data_code <- my_data$wrap
-                        my_data$data_desc <- my_data$data_code
-                    }
-                }
+                        if((my_fx=="y")||(my_fx=="yt")||(my_fx=="ys")||(my_fx=="yc")){
+                            my_data$dy <- 1
+                            my_data$mth <-1
+                            if(my_fx=='yt'){
+                                my_data$data_code <- self$code
+                                my_data$data_desc <- 'dummy-desc'
+                            }
+                            if((my_fx=="ys")|| (my_fx=="yc")){
+                                my_data$data_code <- my_data$wrap
+                                my_data$data_desc <- my_data$data_code
+                            }
+                        }
 
-                my_data<- dplyr::arrange(my_data,yr,mth,dy,data_desc)
+                        my_data<- dplyr::arrange(my_data,yr,mth,dy,data_desc)
 
 
 
-                my_data$pc <- NULL
-                if(my_pc > 0){
+                        my_data$pc <- NULL
+                        if(my_pc > 0){
 
-                    #my_k <- self$freq_default
+                            #my_k <- self$freq_default
 
-                    #if(!is.null(self$freq)){ my_k <- self$freq}
+                            #if(!is.null(self$freq)){ my_k <- self$freq}
 
-                    my_data$pc <- with(
-                        my_data,
-                        ave(
-                            value,
-                            data_code,
-                            FUN=function(x){quantmod::Delt(x,k= my_k)}
-                        )
-                    )*100
+                            my_data$pc <- with(
+                                my_data,
+                                ave(
+                                    value,
+                                    data_code,
+                                    FUN=function(x){quantmod::Delt(x,k= my_k)}
+                                )
+                            )*100
 
-                }else{
+                        }else{
 
-                    my_data$pc <- my_data$value
-                }
+                            my_data$pc <- my_data$value
+                        }
 
-            }#nrow
-            if(encode) {
+                    }#nrow
 
-                return( private$en_code(my_data))
+                    self$df <- my_data
+            }
 
-            }else{
+            if(encode && !is.null( self$df )) {
 
-                return( my_data )
+                self$df <- private$en_code(  self$df )
 
             }
+
+            return( self$df  )
+
+
             #
 
         }#get_data
 
         ,set_freq = function(value){
+
             if(!missing(value) && !is.null(value)){
+
                 self$freq <- value
 
             }
             invisible(self)
         }
+
         ,set_freq_default = function(value){
+
             if(!missing(value) && !is.null(value)){
                 self$freq_default <- switch(value,
                                             'd' =1,
@@ -508,6 +619,7 @@ tp <- R6::R6Class(
             }
             invisible(self)
         }
+
         ,set_group = function(value){
             if(!missing(value) && !is.null(value)){
                 self$is_group <- value
@@ -515,13 +627,13 @@ tp <- R6::R6Class(
             invisible(self)
         }
 
-
         ,set_title = function(value){
             if(!missing(value) && !is.null(value)){
                 self$title <- value
             }
             invisible(self)
         }
+
         ,set_legend_xy = function(x,y){
             if(!missing(x) && !is.null(x)){
                 self$legend_x <- x
@@ -553,7 +665,6 @@ tp <- R6::R6Class(
             }
             invisible(self)
         }
-
 
         ,set_breaks = function(value ){
             if(!missing(value) && !is.null(value)){
@@ -654,7 +765,6 @@ tp <- R6::R6Class(
             return(my_ylab)
         }
 
-
         ,plot_pc = function(brewer_set = "Set1", ytitle=NULL, dazzle=FALSE, encode = T,
                             is_themed = T,
                             strip_col = beamaColours::get_blue(),
@@ -667,9 +777,13 @@ tp <- R6::R6Class(
             require(magrittr)
             require(ggplot2)
 
+            my_data <- NULL
+
+
             my_data<- self$get_data( encode = encode)
 
 
+             #return(my_data)
 
             my_pc <- as.numeric(self$pc)
             my_frq <- self$freq
@@ -873,7 +987,7 @@ tp <- R6::R6Class(
             }
 
             g <- g + labs( x="", y = my_ylab)
-            g <- g + geom_hline( aes(yintercept=0) )
+            g <- g + geom_hline( aes(yintercept= self$yintercept) )
 
 
             if( !(self$delta_x == 0) ){
@@ -1117,7 +1231,11 @@ tp <- R6::R6Class(
             if(self$is_smooth){
                 g <- g + ggplot2::geom_smooth(method='lm',colour='red')
             }
-            #g <- g + geom_hline(aes(yintercept=0))
+
+            if(!is.null(self$yintercept)){
+                g <- g + geom_hline(aes(yintercept=self$yintercept))
+            }
+
             if(BREXIT_MODE){
 
                 g <- g + geom_vline( aes(xintercept = as.numeric(as.Date( BREXIT_POINT )) ), colour = beamaColours::get_pink(), linetype = 'dashed', size= 1  )
@@ -1231,6 +1349,7 @@ tp <- R6::R6Class(
 
 
         }
+
         ,to_clipboard = function( x, row.names=FALSE, col.names=TRUE, ...) {
             write.table( x,"clipboard", sep="\t", row.names=row.names, col.names=col.names, ...)
         }
@@ -1295,12 +1414,13 @@ tp.view_ons_code <- function( code='ABMI', is_growth = F, select_yr=c(2010,2020)
 #' @export
 #'
 #' @examples
-tp.view_code <- function( code='ABMI', is_growth = F, select=NULL, select_yr=c(2010,2020), is_themed = T, ops = 'avg', title_font_size = 14){
+tp.view_code <- function( code='ABMI', is_growth = F, select=NULL, select_yr=c(2010,2020), is_themed = T, ops = 'avg', title_font_size = 14, title = NULL, dp = 1){
     #source('global.R')
 
     bt <- tg$new(x=code)
-
-    bt$plot( is_growth = is_growth, title = code, select = select , select_yr = select_yr, is_themed = is_themed, ops = ops, title_font_size = title_font_size)
+    my_title <- title
+    if(is.null( title)){ my_title <- code }
+    bt$plot( is_growth = is_growth, title = my_title, select = select , select_yr = select_yr, is_themed = is_themed, ops = ops, title_font_size = title_font_size, dp = dp)
 
 }
 
@@ -1332,7 +1452,15 @@ tp.view_ons_spider<- function(
     y1 = lubridate::year(Sys.Date())-2,
     y2=lubridate::year(Sys.Date()),
     k = NULL, fx = NULL,
-    y_delta = c(0,0)
+    y_delta = c(0,0),
+    show_growth_caps = F,
+    caps_x = c(1, 1, -1, -1),
+    caps_y = c(1,-1, -1,  1),
+    caps_lbl = c('EXPANSION','RECOVERY','CONTRACTION','SLOWDOWN'),
+    caps_col = gray.colors(10)[7],
+    caps_size = 8
+
+
 ){
     my_data <- onsR2::download( code = code)
     my_ts <- my_data$m_data
@@ -1360,7 +1488,16 @@ tp.view_ons_spider<- function(
 
     }
 
-    my_plot$plot_spider( title=my_data$title, y1= y1, y2 = y2, k = my_k, fx = tolower( my_fx ), y_delta = y_delta )
+    my_plot$plot_spider(
+        title=my_data$title, y1= y1, y2 = y2, k = my_k,
+        fx = tolower( my_fx ), y_delta = y_delta,
+        show_growth_caps = show_growth_caps,
+        caps_x = caps_x,
+        caps_y = caps_y,
+        label = caps_lbl,
+        size = caps_size,
+        colour = caps_col
+    )
 }
 
 tp.view_spider<- function(
@@ -1373,13 +1510,22 @@ tp.view_spider<- function(
     is_brexit = FALSE,
     brexit_colour = beamaColours::get_pink(),
     point_colour = beamaColours::get_pink(),
-    y_delta = c(0,0)
+    y_delta = c(0,0),
+    db = tp_utils$new()$get_db(),
+    show_growth_caps = F,
+    caps_x = c(1, 1, -1, -1),
+    caps_y = c(1,-1, -1,  1),
+    caps_lbl = c('EXPANSION','RECOVERY','CONTRACTION','SLOWDOWN'),
+    caps_col = gray.colors(10)[7],
+    caps_size = 8
+
+
 ){
     my_title <- title
     if( is.null( title )){
         my_title <- code
     }
-    my_plot <- tg$new( code )
+    my_plot <- tg$new( code, db_name = db )
     my_k <- k
     my_fx <- fx
 
@@ -1404,7 +1550,14 @@ tp.view_spider<- function(
         is_brexit = is_brexit,
         brexit_colour = brexit_colour,
         point_colour = point_colour,
-        y_delta = y_delta
+        y_delta = y_delta,
+        show_growth_caps = show_growth_caps,
+        caps_x = caps_x,
+        caps_y = caps_y,
+        caps_lbl = caps_lbl,
+        caps_size = caps_size,
+        caps_col = caps_col
+
     )
 
 }
@@ -1488,7 +1641,8 @@ tp.get_pc <- function(
      select_mth = c(1, 1),
      fx ='MAT1,MAT12,MQT1,MAT4,MM1,MM3,MM12,QQ1,QQ4,YTD1,YTD12,YTD4,YY1,MAYTDM1',
      ops = 'avg',
-     value_only = FALSE
+     value_only = FALSE,
+     db = NULL
 ){
 
     #code = 'k646'; yr = 2016; mth= 6;fx='mm12'
@@ -1499,7 +1653,7 @@ tp.get_pc <- function(
     m2 <- select_mth[ length(select_mth) ]
 
     my_fx <- toupper( fx )
-    my_data <- tg.get_growth_data( code = code, select = fx, select_yr = c(y1,y2), ops = ops)
+    my_data <- tg.get_growth_data( code = code, select = fx, select_yr = c(y1,y2), ops = ops, db = db)
 
     my_data_n <- nrow( my_data )
 
@@ -1528,7 +1682,8 @@ tp.get_value <- function(
     select_mth = c(1, 1),
     fx ='MTH,QTR,MAT,YTD,MAYTD',
     ops = 'avg',
-    value_only = FALSE
+    value_only = FALSE,
+    db = NULL
 ){
 
     #code = 'k646'; yr = 2016; mth= 6;fx='MAT'
@@ -1539,7 +1694,7 @@ tp.get_value <- function(
     m2 <- select_mth[ length(select_mth) ]
 
     my_fx <- toupper( fx )
-    my_data <- tg.get_agg_data( code = code, select = fx, select_yr = c(y1,y2), ops = ops)
+    my_data <- tg.get_agg_data( code = code, select = fx, select_yr = c(y1,y2), ops = ops, db = db)
 
     my_data_n <- nrow( my_data )
 
@@ -1568,7 +1723,7 @@ tp.get_trend <- function(
     select_mth = c(1, 1),
     fx ='MAT1,MAT12,MQT1,MAT4,MM1,MM3,MM12,QQ1,QQ4,YTD1,YTD12,YTD4,YY1',
     ops = 'avg',
-    value_only = FALSE
+    value_only = FALSE, is_plot = FALSE, plot_title = NULL, short_code = F, db = NULL
 ) {
 
     is_present <- function( x ){ length( grep(x, fx) ) > 0 }
@@ -1584,8 +1739,46 @@ tp.get_trend <- function(
         my_fxn <- tp.get_value
     }
 
+    my_trend <- my_fxn( code = code, select_yr = select_yr, select_mth = select_mth, fx = fx, ops = ops, value_only = value_only, db = db )
+
+    if( nrow(my_trend)>0 ){
+        if(is_plot){
+
+            my_x <- my_trend$name
+            if(!short_code){ my_x <- my_trend$smart }
+
+            df <- data.frame(
+                x = factor( my_x),
+                y = my_trend$value,
+                code = my_trend$name,
+                lbl_in = my_trend$value
+            )
+
+            my_title <- plot_title
+
+            if(is.null( plot_title)){
+
+                my_info <- tg.get_info( code, is_code = T, db = db )
+                my_name <- code
+
+                if(nrow(my_info) > 0){
+                   my_name <- my_info$data_desc[ 1 ]
+                }
+
+                if(is_growth){
+                    my_title <- sprintf("Growth - %s", my_name)
+                }else{
+                    my_title <- sprintf("Values - %s", my_name)
+                }
+
+            }
+
+            tp.plot_bar_flip(df, title = my_title, subtitle = sprintf("%s %s", month.name[ select_mth[ 1 ]], select_yr[ 1 ]))
+
+        }
+    }
     return(
-        my_fxn( code = code, select_yr = select_yr, select_mth = select_mth, fx = fx, ops = ops, value_only = value_only )
+        my_trend
     )
 
 }#tp.get_trend('l_elec')
@@ -1672,7 +1865,7 @@ tp.update_tdi <- function( data_code, data_icon = 'line-chart', y1 = NULL){
 }
 
 #tp.update_tdi('K646')
-tp.tdi_get_growth_info <- function( data_code, pc='MM12'){
+tp.tdi_get_growth_info <- function( data_code, pc='MM12', ops = 'avg'){
 
 
     my_data_raw <- beamaTrends::tg$new( data_code )
@@ -1690,6 +1883,7 @@ tp.tdi_get_growth_info <- function( data_code, pc='MM12'){
 
     return( my_data )
 }
+
 tp.update_tdi_pc <- function( data_code, pc='MM12', data_icon = 'line-chart', y1 = NULL, data_unit = '%', ops = 'avg'){
     #data_code <- 'MGSX'
 
@@ -1707,7 +1901,7 @@ tp.update_tdi_pc <- function( data_code, pc='MM12', data_icon = 'line-chart', y1
     # }
 
     my_data_ts <- NULL
-    my_data <- tp.tdi_get_growth_info(data_code = data_code, pc = pc)
+    my_data <- tp.tdi_get_growth_info(data_code = data_code, pc = pc, ops = ops)
 
     my_unit <- data_unit
 
@@ -1815,7 +2009,7 @@ tp.plot_regression <- function (x, y, xlab="", ylab="", ret=FALSE, is_themed = T
             "Adj R2 = ",     signif( linear_adj_r2,    sig_fig ),
             "; Intercept =", signif( linear_intercept, sig_fig ),
             "; Slope =",     signif( linear_slope,     sig_fig ),
-            "; P =",         signif( linear_pvalue,    sig_fig )
+            "; P-value =",   signif( linear_pvalue,    sig_fig )
         )
     )
 
@@ -2106,7 +2300,8 @@ tp.plot_tdi_gauge <- function(data_code = 'USD', delta = 25, label=NULL ,
                            rev=FALSE, bc = TRUE, dp =1, file_name ="sample",
                            is_live=FALSE, y1 = 2016, y2 = 2016, m1=1, m2=6, d1 = 1, d2=23,
                            r = list(), is_big= FALSE, file_dir = "R:/shiny/beama/bmonitor/www",
-                           ryg = c("#b63e97","#d5c40a","#30a4dc")
+                           ryg = c("#b63e97","#d5c40a","#30a4dc"),
+                           snap_delay = 2
 ){
     require(googleVis)
 
@@ -2260,17 +2455,21 @@ tp.plot_tdi_gauge <- function(data_code = 'USD', delta = 25, label=NULL ,
 
 
 
-    tp.snip_plot( file_name, r = my_rect, file_dir = file_dir)
+    tp.snip_plot( file_name, r = my_rect, file_dir = file_dir, snap_delay = snap_delay)
 
 }
 
-tp.snip_plot <- function( file_name = "sample1",  r = list( left = 15, top = 110, width = 285, height = 280), file_dir = "R:/shiny/beama/bmonitor/www" ){
+tp.snip_plot <- function(
+    file_name = "sample1",
+    r = list( left = 15, top = 110, width = 285, height = 280),
+    file_dir = "R:/shiny/beama/bmonitor/www",
+    snap_delay = 2){
 
 
     cmd <- sprintf( "snip_gauge.exe %s %s %s %s %s/%s", r$left, r$top, r$width, r$height,  file_dir=file_dir, file_name = file_name)
 
     write(cmd,"snip.bat")
-    Sys.sleep(2)
+    Sys.sleep( snap_delay)
     system("snip.bat")
 
 }
@@ -2468,7 +2667,423 @@ tp.update_point <- function(code, yr, mth, value, dy = 1, d360 = 31){
     abc <- beamaTrends::tp.run_sql( sql )
     return(sql)
 }
-# tp.append_meta('uhma',4)
+
+tp.get_euro <- function(){
+
+    c(sort(sample(1:50,5)),sort(sample(1:12,2)))
+}
+
+tp.get_group <- function(grp, code_only = F, raw = F){
+
+    tp_data$new(grp)$get_group(code_only = code_only, raw = raw)
+
+}
+
+tp.view_groups <- function(){
+
+    tp.run_sql("select distinct grp from trends_groups ")
+}
+
+tp.seasonal_factor <- function( code , m = 1, y1=2015, y2 = y1+100, is_ratio = F, is_filter = F, as_pc = F ){
+    #code='topsi_turnover_25' ; m = c(8:12); y1=1998; y2 = y1+100; is_ratio = F; is_filter = F
+    abc <- tp.view_data( code )
+
+    if(length( abc ) > 0){
+
+       bcd <- abc
+       if(is_filter){
+
+           frq <- frequency( abc )
+           bcd <- window( abc, start = c(y1,1), end=c(y2,frq))
+
+       }
+       a <- subset( bcd,   cycle(bcd) %in% m)
+       b <- bcd
+
+       if(is_ratio){
+
+         b <-  subset( bcd, !(cycle(bcd) %in% m) )
+
+       }
+
+       mean_a <- mean( a )
+       mean_b <- mean( b )
+
+
+       if( !(mean_b == 0) ){
+
+          my_ratio <- mean_a / mean_b
+          my_factor <- ifelse(as_pc, 100*(my_ratio - 1 ), my_ratio)
+          return( my_factor )
+
+       }
+    }
+   NULL
+}
+
+#'Expected colums in dataframe
+#' x = factor,
+#' y = numeric,
+#' lbl_in = numeric,
+#' lbl_out = numeric,
+#' code = factor (may be same as x)
+#' example columns:  x=LETTERS[1:10]; y=rnorm(10); code = x; lbl_in = y; lbl_out = runif(10)
+#' example function: df = data.frame( x = x, y= y, code = code ); tp.plot_bar_flip(df)
+#' example function: df = data.frame( x = x, y= y, code = code, lbl_in = lbl_in ); tp.plot_bar_flip(df)
+#' example function: df = data.frame( x = x, y= y, code = code, lbl_in = lbl_in, lbl_out= round(lbl_out,2) ); tp.plot_bar_flip(df, out_gap = 8)
+#'
+tp.plot_bar_flip <- function(
+    df, ytitle = '', title = 'Boring chart', dp = c(1,1), out_gap = 5, is_smart = T, smart = ESMART_LABELS,
+    colours = c(beamaColours::get_blue(), beamaColours::get_pink()), in_out_units = c('%',''), subtitle = NULL
+){
+
+    require(ggplot2)
+    require(ggthemes)
+
+    my_data <- tibble::as.tibble(  df )
+
+    my_data <- dplyr::arrange( my_data, y )
+    my_data$smart <- as.character( my_data$x )
+
+    my_max <- max( abs(my_data$y))
+    my_sign <- (my_data$y > 0 )
+    my_mult <- ifelse( my_sign, 1, -1)
+
+
+
+
+    my_data$lbl_in_pos <- my_data$y / 2
+    my_data$lbl_out_pos <- my_data$y + out_gap * my_max /100 * my_mult
+
+    if(!is.null( my_data$lbl_in)){
+            my_data$lbl_in <- paste0( beamaUtils::set_decimal(my_data$lbl_in, dp[ 1 ]), in_out_units[1] )
+    }
+
+    if(!is.null( my_data$lbl_out)){
+
+            if(nchar(in_out_units[2]) > 0 ){
+                my_data$lbl_out <- paste0( beamaUtils::set_decimal(my_data$lbl_out, dp[ 2 ]), in_out_units[2] )
+            }
+    }
+
+
+    #return(my_data)
+
+    if(is_smart){
+
+
+        if( !is.null( smart ) ){
+
+            names_smart <- names(smart)
+            for( name in names_smart){
+
+                my_data$smart[ which( as.character(my_data$code) == name) ] <- smart[[ name ]]
+
+            }
+
+        }
+    }
+
+
+    my_data$smart <- factor( my_data$smart, levels = my_data$smart)
+
+    my_data$col <- ( my_data$y > 0 )
+
+    fill_colour <- NULL
+    if(sum(my_data$col) == 0 || (nrow( my_data) == sum(my_data$col) ) ){
+
+        fill_colour <-  colours
+
+    }else{
+
+        fill_colour <- rev( colours )
+
+    }
+
+    my_title <- title
+    my_ytitle <- ytitle
+
+    g <- ggplot( my_data,  aes(x = factor(smart), y= y, fill = col) )
+    g <- g + geom_bar(stat = "identity")
+    g <- g + scale_fill_manual( values = fill_colour, guide = FALSE, name = "")
+    g <- g +  coord_flip() + labs (x = '', y= my_ytitle )
+    g <- g + ggtitle( my_title, subtitle = subtitle)
+
+    if(!is.null( my_data$lbl_in )){
+        g <- g + geom_text( aes(x = factor( smart ), y = lbl_in_pos, label = lbl_in) , colour= "gray85",  size = 4, position=position_dodge(width=1) )
+    }
+
+    if(!is.null( my_data$lbl_out) ){
+        g <- g + geom_text( aes(x = factor( smart ), y = lbl_out_pos, label = lbl_out) , colour= "gray70",  size = 3, position=position_dodge(width=1) )
+    }
+
+    g <- g + theme_igray()
+    g <- g + scale_colour_tableau("colorblind10")
+    g <- g + theme(
+
+        legend.position = "none",
+        legend.title = element_blank(),
+        text = element_text(family="Museo 300", face="plain", size = 14),
+        plot.title = element_text(family = "Museo 500", face="plain", size= 14)
+
+    )
+    print(g)
+}
+
+# tp.plot_brexit_indicators()
+tp.plot_brexit_indicators <- function(
+    indicators = "USDM,EURM,K646,D7BT,IKBH,K222,BQKU,CT2AM-AW,BQKR,S2KU,JVZ7,K22A,KAB9,ABMI-UKEA,NPEL,J5EK,CHAW,BQKS,L87S,L87U,DYDC,JT27,CT2AM-ANW,CT2AM-ARM,OECD/MEI_CLI_LOLITOAA_GBR_M"
+    ,out_gap = 15
+    ,dt1 = c(2016,6)
+    ,dt2 = NULL
+    ,ytitle = paste0('Growth since ',month.name[ dt1[2]],' ' , dt1[ 1 ])
+    ,title = 'UK Economic Indicators'
+    ,is_brexit = T
+    ,is_smart = T
+    , smart_labels = ESMART_LABELS
+    ,colours = c(beamaColours::get_blue(), beamaColours::get_pink() )
+
+){
+
+    df <- td.get_brexit_indicators( indicators =  indicators, dt1 = dt1, dt2 = dt2, is_brexit = is_brexit)
+    tp.plot_bar_flip(
+        df, ytitle = ytitle, title = title, out_gap = out_gap, smart = smart_labels, colours=colours
+    )
+
+}
+
+# tp.plot_xy(yr=2015)
+# tp.plot_xy(fx='QQ1,QQ4')
+# tp.plot_xy(fx='MAT1,MAT12')
+# tp.plot_xy(yr=2015, mth = 9,fx='MAT1,MAT12')
+# tp.plot_xy( code = "m_elec,m_mech,m_fb,m_dt,m_lpt,m_iron,m_ind,m_bispa,m_composite,l_elec,l_mech")
+# tp.plot_xy(yr=2017 ,mth=9, code = "m_elec,m_mech,m_fb,m_dt,m_lpt,m_iron,m_ind,m_bispa,m_composite,l_elec,l_mech")
+
+# PG_SMART <- list(
+#
+#     `PG-NEWEY` =	'Newey',
+#     `PG-WFSENATE` =	'WF Senate',
+#     `PG-EDMUNDSON` =	'Edmundson',
+#     `PG-FEGIME` =	'Fegime',
+#     `PG-SCREWFIX` =	'ScrewFix',
+#     `PG-DENMANS` =	'Denmans',
+#     `PG-AWEBB` =	'Awebb',
+#     `PG-ELECTRICCENTRE` =	'Electric Centre',
+#     `PG-OTHERS` =	'Other Wholesalers',
+#     `PG-ANEW` =	'Anew',
+#     `PG-CEF` =	'CEF',
+#     `PG-WILTS` =	'Wilts',
+#     `PG-RETAIL` =	'Other Retailers',
+#     `PG-YESSS` =	'Yesss',
+#     `PG-TOTAL` =	'Plus Grouip Total',
+#     `PG-NLB` =	'Plus Gorup - Others',
+#     `PG-LIA` =	'Plus Group - LIA',
+#     `PG-BEAMA` =	'Plus Group - BEAMA'
+#
+# )
+#
+# PG_CODES_PACKED <- 'PG-NEWEY,PG-WFSENATE,PG-EDMUNDSON,PG-FEGIME,PG-SCREWFIX,PG-DENMANS,PG-AWEBB,PG-ELECTRICCENTRE,PG-OTHERS,PG-ANEW,PG-CEF,PG-WILTS,PG-RETAIL,PG-YESSS,PG-TOTAL,PG-NLB,PG-LIA,PG-BEAMA'
+# PG_DB <- "R:/packages/bistats/inst/extdata/bistats.sqlite"
+
+tp.plot_xy <- function(code='USDM,EURM,K646,D7BT', yr = 2017, mth = 9, fx ='MM1,MM12', db = NULL,
+                       show_title =T, is_shaded = T, shades_size = c(4,2.5),
+                       shades = c(
+                           beamaColours::get_pink(), beamaColours::get_green(),
+                           beamaColours::get_darkyellow(), beamaColours::get_limegreen()
+                       ),
+                       is_smart = F,
+                       smart_labels = NULL,
+                       show_growth_caps = F,
+                       caps_x = c(1, 1, -1, -1),
+                       caps_y = c(1,-1, -1,  1),
+
+                        caps_col = gray.colors(10)[7],
+                        caps_size = 8,
+                        caps_labels = c('EXPANSION','RECOVERY','CONTRACTION','SLOWDOWN')
+
+){
+# code = PG_CODES_PACKED;db=PG_DB; yr = 2017; mth = 9; fx ='MM1,MM12'; show_title =T; is_shaded = T; shades_size = c(4,2.5) ;
+# shades = c(  beamaColours::get_pink(), beamaColours::get_green(),   beamaColours::get_darkyellow(), beamaColours::get_limegreen()    )
+    require(ggplot2)
+    require(ggthemes)
+
+    codes <- strsplit(code,",")[[ 1 ]]
+    df1 <-  beamaTrends::tp.get_trend(  code ,  yr , mth , fx, db = db )
+
+    df <- df1[,c('data_desc','data_code','name','value')]
+    dfs <- tidyr::spread( df, name, value )
+
+    fxp <- codes <- strsplit(fx,",")[[ 1 ]]
+
+    names(dfs)[ names( dfs ) == fxp[ 1 ] ] <- 'x'
+    names(dfs)[ names( dfs ) == fxp[ 2 ] ] <- 'y'
+    names(dfs)[ names( dfs ) == 'data_desc' ] <- 'xd'
+    names(dfs)[ names( dfs ) == 'data_code' ] <- 'xc'
+
+
+    dfs$col <- 'expansion'
+    dfs[ which( dfs$x < 0 & dfs$y < 0) ,'col'] <- 'contraction'
+    dfs[ which( dfs$x < 0 & dfs$y > 0) ,'col'] <- 'slowdown'
+    dfs[ which( dfs$x > 0 & dfs$y < 0) ,'col'] <- 'recovery'
+
+    n_contraction <- nrow( dplyr::filter( dfs,col == 'contraction'))
+    n_slowdown <- nrow( dplyr::filter( dfs,col == 'slowdown'))
+    n_recovery  <- nrow( dplyr::filter( dfs,col == 'recovery'))
+    n_expansion  <- nrow( dplyr::filter( dfs,col == 'expansion'))
+
+    my_shades <- NULL
+    if( n_contraction > 0 ){  my_shades <- shades[ 1] }
+    if( n_expansion > 0 ){  my_shades <- c(my_shades, shades[ 2 ]) }
+    if( n_recovery > 0 ){  my_shades <- c(my_shades, shades[ 3 ]) }
+    if( n_slowdown > 0 ){  my_shades <- c(my_shades, shades[ 4 ]) }
+
+    xxt <- dplyr::filter( df1,name == fxp[1])$smart[ 1 ]
+    yyt <- dplyr::filter( df1,name == fxp[2])$smart[ 1 ]
+
+
+    # if(is_smart){
+    #
+    #
+    #     if( !is.null( smart_labels ) ){
+    #
+    #         for( name in names(smart_labels)){
+    #
+    #             dfs$smart[ which( my_data$data_code == name )] <- smart_labels[[ name ]]
+    #
+    #         }
+    #     }
+    # }
+    #
+    g <- ggplot( dfs, aes(x = x, y=y ) )
+
+    if( is_shaded ){
+
+        g <- g + geom_point(colour = beamaColours::get_gray() , size = shades_size[ 1 ])
+        g <- g + geom_point( aes(colour = factor(col) ), size = shades_size[ 2 ])
+        g <- g + scale_color_manual( values = my_shades   )
+
+    }else{
+
+        g <- g + geom_point( size = shades_size[ 1 ], colour=beamaColours::get_corporate_blue())
+
+    }
+
+    if(show_growth_caps){
+
+        g <- g + annotate(
+            'text',
+            x = caps_x,
+            y = caps_y,
+            label = caps_labels,
+            size = caps_size,
+            colour = caps_col
+        )
+
+    }
+
+    g <- g + geom_hline(yintercept = 0) + geom_vline(xintercept = 0)
+    g <- g + labs( x = xxt, y = yyt)
+
+    if( show_title){
+
+        g <- g + ggtitle( label = 'Growth Cycle', subtitle= sprintf("%s %s", month.name[ mth], yr))
+
+    }
+    g <- g + geom_text( data=dfs, aes( x = x, y = y, label = xd),size =3, vjust=-0.8,hjust=0.4)
+
+
+    g <- g + theme_igray()
+    #g <- g + scale_colour_tableau("colorblind10")
+    g <- g + theme(
+
+        legend.position = "none",
+        legend.title = element_blank()
+
+    )
+
+    print(g)
+    return( dfs )
+
+}
+
+# tp.get_productivity( 'prod_25')
+# tp.get_productivity( 'prod_26' )
+# tp.get_productivity( 'prod_27' )
+# tp.get_productivity( 'prod_28' )
+# tp.get_productivity( 'prod_29' )
+# tp.get_productivity( 'prod_30' )
+# tp.get_productivity( 'prod_33' )
+
+tp.get_productivity <- function(
+    code = 'prod_26', title = 'Productivity', fx='qtr', select_yr =c(2012,2020),
+    is_plot = TRUE, plot_fx = 'QTR,YR,YTD,MAT'
+){
+
+    grp <- beamaTrends::tp_data$new( code )$get_group()
+    tov_code <- dplyr::filter(grp, tolower(description) == 'turnover' )$code
+    emp_code <- dplyr::filter(grp, tolower(description)  == 'employment' )$code
+
+    tov_data <- tg$new( tov_code )$set_agg( fx )$get_agg()
+    emp_data <- tg$new( emp_code )$set_agg( fx )$get_agg()
+
+    tov_start <- stats::start( tov_data)
+    tov_end <- stats::end( tov_data )
+
+    emp_start <- stats::start( emp_data)
+    emp_end <- stats::end( emp_data )
+
+    tov_start_dd <- beamaUtils::ddays(tov_start[ 1 ], tov_start[ 2 ] )
+    tov_end_dd <- beamaUtils::ddays(tov_end[ 1 ], tov_end[ 2 ] )
+
+    emp_start_dd <- beamaUtils::ddays(emp_start[ 1 ], emp_start[ 2 ] )
+    emp_end_dd <- beamaUtils::ddays(emp_end[ 1 ], emp_end[ 2 ] )
+
+    pp_start <- tov_start
+    if(tov_start_dd < emp_start_dd ){
+        pp_start <- emp_start
+    }
+
+    pp_end <- tov_end
+    if(tov_end_dd  > emp_end_dd){
+        pp_end <- emp_end
+    }
+
+    pp_up <- stats::window(tov_data, pp_start, pp_end)*10e6
+    pp_dow <- stats::window( emp_data, pp_start, pp_end)*10e3
+
+    pp <- stats::ts(pp_up / pp_dow, start=pp_start, frequency = frequency( pp_up))
+
+    if(is_plot){
+        tg$new( pp )$plot(  is_themed = T, select_yr = select_yr, select = plot_fx )
+    }
+    return( pp )
+}
+
+tp.sync_productivity <- function(){
+
+    my_codes <- c(
+        'PROD-SIC-25', 'PROD-SIC-26', 'PROD-SIC-27', 'PROD-SIC-28',
+        'PROD-SIC-29', 'PROD-SIC-30', 'PROD-SIC-33','PROD-SIC-C,', 'PROD-SIC-F'
+    )
+    prod_code <- function( x ){ sprintf("prod_%s", substr( x, 10,11) ) }
+
+    for(i in 1: length( my_codes)){
+
+        cur_code <- my_codes[ i ]
+        my_ts <- tp.get_productivity( prod_code( cur_code ), fx = 'qtr', is_plot = F)
+        tg_ons$new( cur_code )$set_delay_update( T )$add_trends_data( x= my_ts)
+    }
+
+    tp_data.update_periods()
+
+    # cur_code <- my_codes[ 8]
+    # my_ts <- tp.get_productivity( prod_code( cur_code ), fx = 'qtr', is_plot = F)
+    # tg_ons$new( cur_code )$set_delay_update( F )$add_trends_data( x= my_ts)
+
+
+}
+
+#
 #examples
 # dst_db <- 'R:/packages/bistats/inst/extdata/bistats.sqlite'
 # tp.copy_ms_table(tbl_name = 'plus_group', tbl_db = dst_db)
@@ -2562,4 +3177,16 @@ tp.update_point <- function(code, yr, mth, value, dy = 1, d360 = 31){
 #      is_overwrite = F
 # )
 
+##### COPY TRADE TABLE - OVERWRITE ########
+# dst_db <- 'R:/data/lite/uktrade.sqlite'
+# tp.copy_ms_table(tbl_name = 'hmrc_uk_trade', tbl_db = dst_db)
+
+# dst_db <- 'R:/data/lite/uktrade.sqlite'
+# beamaTrends::tp.copy_ms_table(
+#      tbl_name = 'hmrc_uk_trade',
+#      tbl_db = dst_db,
+#      tbl_sql = "select * from hmrc_uk_trade where yr = 2017 and mth =8",
+#      is_append = T,
+#      is_overwrite = F
+# )
 

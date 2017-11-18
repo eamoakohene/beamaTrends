@@ -94,9 +94,9 @@ tp_utils <- R6::R6Class(
 
 
     ,plot_save = function(
-        file="glance.png",width=650,height=390,path="W:/reports/latex/images/",ppi=72
+        file="glance.png",width=650,height=390,path="W:/reports/latex/images/",ppi=72, skale = 1
     ){
-        ggplot2::ggsave(file=paste0(path,file,".png"),height=height/ppi,width=width/ppi,dpi=ppi,units="in")
+        ggplot2::ggsave(file=paste0(path,file,".png"),height=height/ppi,width=width/ppi,dpi=ppi*skale,units="in")
     }
 
     ,vec_shift_left = function( x, delta = 1 ){
@@ -127,6 +127,7 @@ tp_utils <- R6::R6Class(
 
         return(y)
     }
+
     ,to_proper_case =  function(txt){
 
         return(
@@ -240,8 +241,6 @@ tp_utils <- R6::R6Class(
         )
     }
 
-
-
     ,str_pos = function(x,pattern=","){
       my_str <- gregexpr(pattern =pattern,x)
       return(my_str[[1]][1])
@@ -300,3 +299,7 @@ tpu.update_self <- function(){
 tpu.get_db <- function(){
     tp_utils$new()$get_db()
 }
+TRENDS_DATA_FIELDS_ALL = " a.yr, a.mth, a.dy, a.data_code, a.data_value,a.data_days,b.data_unit,b.data_desc,b.data_src "
+TRENDS_DATA_FIELDS = " a.yr, a.mth, a.dy, a.data_code, a.data_value,a.data_days,b.data_desc "
+TRENDS_DATA_TABLES = " trends_data a, trends_meta b "
+TRENDS_DATA_WHERE = " and a.data_code = b.data_code "
